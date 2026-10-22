@@ -68,7 +68,7 @@ document.querySelector('#app').innerHTML = `
       <dialog id="settings-dialog" aria-labelledby="settings-title">
         <div class="dialog-heading">${icon('settings')}<h2 id="settings-title">${label('settingsTitle')}</h2></div>
         <p>${label('qualityDefault')}</p>
-        ${['camera', 'microphone'].map((name) => `<section class="settings-section"><h3>${icon(name === 'camera' ? 'camera' : 'mic')}${label(name)}</h3><p class="source-name" id="${name}-source-name"></p><div class="source-picker" id="${name}-picker" hidden><label for="${name}-device">${label('sourceLabel')}</label><select id="${name}-device"></select></div>${name === 'camera' ? `
+        ${['camera', 'microphone'].map((name) => `<section class="settings-section"><h3>${icon(name === 'camera' ? 'camera' : 'mic')}${label(name)}</h3><p class="source-name" id="${name}-source-name"></p><p class="notice" id="${name}-source-status" role="status" hidden></p><div class="source-picker" id="${name}-picker" hidden><label for="${name}-device">${label('sourceLabel')}</label><select id="${name}-device"></select></div>${name === 'camera' ? `
           <div class="format-control"><label for="camera-format">${label('formatLabel')}</label><select id="camera-format" aria-describedby="format-help format-notice">${CAMERA_FORMATS.map(({ id, label: key }) => `<option value="${id}" data-i18n="${key}">${t(key)}</option>`).join('')}</select><p id="format-help">${label('formatHelp')}</p><p class="notice" id="format-notice" role="status" hidden></p><button class="crop-button" id="allow-crop" type="button" hidden></button></div>` : '<p class="capture-detail" id="audio-detail" hidden></p>'}</section>`).join('')}
         <p class="notice" id="devices-error" role="status" hidden>${label('devicesError')}</p><p class="settings-note">${label('sourceHelp')}</p>
         ${closeButton()}
@@ -133,6 +133,10 @@ function renderSound() {
 
 function renderSource(name) {
   const source = media.getSource(name);
+  const device = media[name];
+  const statusKey = device.error || (device.status === 'requesting' ? 'connecting' : device.muted ? 'interrupted' : device.status === 'paused' ? 'paused' : null);
+  $(`${name}-source-status`).hidden = !statusKey;
+  $(`${name}-source-status`).textContent = statusKey ? t(statusKey) : '';
   const devices = media.devices[name];
   $(`${name}-source-name`).textContent = source.label || t('defaultSource');
   const picker = $(`${name}-device`);

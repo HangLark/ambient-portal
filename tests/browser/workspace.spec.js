@@ -19,6 +19,7 @@ async function installDevices(page) {
     navigator.mediaDevices.getUserMedia = async (constraints) => {
       const kind = constraints.video ? 'video' : 'audio';
       const id = constraints[kind].deviceId?.exact || window.__sources[kind][0];
+      if (id === window.__rejectSource) throw new DOMException('Device busy', 'NotReadableError');
       if (!window.__sources[kind].includes(id)) throw Object.assign(new DOMException('Missing source', 'OverconstrainedError'), { constraint: 'deviceId' });
       const { deviceId, ...quality } = constraints[kind];
       const stream = await capture({ ...constraints, [kind]: quality });
@@ -183,4 +184,37 @@ test('permission-aware input pickers switch only the selected channel and expose
   expect(await page.evaluate(() => window.__captures.length)).toBe(0);
   await page.locator('#settings-open').click();
   await expect(page.locator('#camera-source-name')).toHaveText('System default');
+});
+
+
+test('source failures are visible inside settings without stopping the other input', async ({ page }) => {
+  await installDevices(page);
+  await page.goto('./');
+  await page.locator('#camera-button').click();
+  await page.getByRole('switch').click();
+  await expect(page.locator('#playback-status')).toHaveText('Browser playback running');
+  await page.locator('#settings-open').click();
+  await page.evaluate(() => { window.__rejectSource = 'camera-b'; });
+  await page.locator('#camera-device').selectOption('camera-b');
+  await expect(page.locator('#camera-source-status')).toBeVisible();
+  await expect(page.locator('#camera-source-status')).toContainText('Close other apps');
+  expect(await page.evaluate(() => window.__captures[1].track.readyState)).toBe('live');
+  await page.evaluate(() => { window.__rejectSource = null; });
+  await page.keyboard.press('Escape');
+  await page.locator('#camera-button').click();
+  await expect(page.locator('#preview-status-text')).toHaveText('Live');
+  await page.locator('#settings-open').click();
+  await expect(page.locator('#camera-source-status')).toBeHidden();
+  await page.evaluate(() => { window.__rejectSource = 'mic-b'; });
+  await page.locator('#microphone-device').selectOption('mic-b');
+  await expect(page.locator('#microphone-source-status')).toBeVisible();
+  await expect(page.locator('#microphone-source-status')).toContainText('Close other apps');
+  expect(await page.evaluate(() => window.__captures[2].track.readyState)).toBe('live');
+  await page.keyboard.press('Escape');
+  await page.locator('#language').click();
+  await page.locator('#settings-open').click();
+  await expect(page.locator('#microphone-source-status')).toContainText('关闭其他正在使用它的应用');
+  await page.keyboard.press('Escape');
+  await page.locator('#stop-all').click();
+  expect(await page.evaluate(() => window.__captures.every(({ track }) => track.readyState === 'ended'))).toBe(true);
 });
