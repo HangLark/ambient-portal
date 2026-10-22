@@ -22,7 +22,8 @@ const start = async (page) => {
 test('native widescreen and standard modes switch on the same track while audio continues', async ({ page }) => {
   await start(page);
   await page.getByRole('switch').click();
-  await expect(page.locator('#mic-status')).toHaveText('On');
+  await expect(page.locator('#playback-status')).toHaveText('Browser playback running');
+  await page.locator('#settings-open').click();
   for (const [format, ratio] of [['16:9', 16 / 9], ['4:3', 4 / 3], ['auto', null]]) {
     await page.getByLabel('Aspect ratio', { exact: true }).selectOption(format);
     await expect(page.locator('#camera-format')).toHaveAttribute('aria-busy', 'false');
@@ -33,10 +34,11 @@ test('native widescreen and standard modes switch on the same track while audio 
     expect(actual.resizeMode).toBe('none');
     await expect(page.locator('#preview-detail')).toContainText(`${actual.width} × ${actual.height}`);
     await expect(page.locator('#preview-detail')).toContainText('Device native mode');
-    await expect(page.locator('#mic-status')).toHaveText('On');
+    await expect(page.locator('#playback-status')).toHaveText('Browser playback running');
     expect(await page.locator('video').evaluate((video) => getComputedStyle(video).objectFit)).toBe('contain');
   }
   expect(await page.evaluate(() => window.__formatTracks.length)).toBe(2);
+  await page.keyboard.press('Escape');
   await page.locator('#stop-all').click();
   expect(await page.evaluate(() => window.__formatTracks.every((track) => track.readyState === 'ended'))).toBe(true);
 });
@@ -51,6 +53,7 @@ test('a rejected native ratio needs explicit crop permission and has translated,
       ? Promise.reject(new DOMException('No native portrait mode', 'OverconstrainedError')) : apply(constraints);
   });
   const before = await settings(page);
+  await page.locator('#settings-open').click();
   await page.locator('#camera-format').selectOption('9:16');
   await expect(page.locator('#allow-crop')).toBeVisible();
   await expect(page.locator('#camera-format')).toHaveValue('auto');
@@ -59,7 +62,7 @@ test('a rejected native ratio needs explicit crop permission and has translated,
   for (const [name, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844], ['narrow', 320, 760]]) {
     await page.setViewportSize({ width, height });
     for (const language of ['en-US', 'zh-CN']) {
-      if (await page.locator('html').getAttribute('lang') !== language) await page.locator('#language').click();
+      if (await page.locator('html').getAttribute('lang') !== language) { await page.keyboard.press('Escape'); await page.locator('#language').click(); await page.locator('#settings-open').click(); }
       await expect(page.locator('#allow-crop')).toContainText(language === 'en-US' ? 'Allow crop to fit' : '允许裁切适配');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`format-${name}-${language}.png`), fullPage: true });
@@ -75,6 +78,7 @@ test('a rejected native ratio needs explicit crop permission and has translated,
   expect(portrait.resizeMode).toBe('crop-and-scale');
   await expect(page.locator('#preview-detail')).toContainText('浏览器适配');
   await page.screenshot({ path: testInfo.outputPath('portrait-zh-CN.png'), fullPage: true });
+  await page.keyboard.press('Escape');
   await page.locator('#stop-all').click();
   // Crop permission does not persist across sessions, even though the ratio preference does.
   await page.reload();
@@ -90,11 +94,13 @@ test('ignored constraints are detected rather than displaying a requested ratio 
     const apply = track.applyConstraints.bind(track);
     track.applyConstraints = (constraints) => constraints.aspectRatio ? Promise.resolve() : apply(constraints);
   });
+  await page.locator('#settings-open').click();
   await page.locator('#camera-format').selectOption('9:16');
   await expect(page.locator('#format-notice')).toBeVisible();
   await expect(page.locator('#camera-format')).toHaveValue('auto');
   expect(await settings(page)).toEqual(before);
   await expect(page.locator('#preview-detail')).not.toContainText('9:16');
+  await page.keyboard.press('Escape');
   await page.locator('#stop-all').click();
 });
 
@@ -114,6 +120,7 @@ test('rapid ratio changes serialize, coalesce, and can be stopped during negotia
       window.__inFlight--;
     };
   });
+  await page.locator('#settings-open').click();
   await page.locator('#camera-format').selectOption('16:9');
   await expect(page.locator('#preview-status-text')).toHaveText('Switching…');
   await page.locator('#camera-format').selectOption('9:16');
@@ -129,6 +136,7 @@ test('rapid ratio changes serialize, coalesce, and can be stopped during negotia
   });
   await page.locator('#camera-format').selectOption('16:9');
   await expect(page.locator('#camera-format')).toHaveAttribute('aria-busy', 'true');
+  await page.keyboard.press('Escape');
   await page.locator('#stop-all').click();
   await page.evaluate(() => window.__releaseFormat());
   await expect(page.locator('#preview-status-text')).toHaveText('Standby');
@@ -138,6 +146,7 @@ test('rapid ratio changes serialize, coalesce, and can be stopped during negotia
 
 test('keyboard ratio selection persists without starting capture; blocked storage is harmless', async ({ page }) => {
   await page.goto('./');
+  await page.locator('#settings-open').click();
   const select = page.getByLabel('Aspect ratio', { exact: true });
   await select.focus();
   // Type-ahead and Tab use the native select's keyboard path without an OS popup.
@@ -152,9 +161,12 @@ test('keyboard ratio selection persists without starting capture; blocked storag
   });
   await page.reload();
   await expect(select).toHaveValue('auto');
+  await page.locator('#settings-open').click();
   await select.selectOption('4:3');
+  await page.keyboard.press('Escape');
   await page.locator('#camera-button').click();
   await expect(page.locator('#preview-status-text')).toHaveText('Live');
   await expect(select).toHaveValue('4:3');
+  await page.keyboard.press('Escape');
   await page.locator('#stop-all').click();
 });

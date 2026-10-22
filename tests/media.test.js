@@ -505,3 +505,157 @@ test('stopping an active format switch invalidates its queue without affecting a
   assert.equal(controller.cameraFormatState.selected, '4:3');
   controller.dispose();
 });
+
+test('device inventory never requests capture, hides permission placeholders and deduplicates default microphone aliases', async () => {
+  const { controller, captured } = setup();
+  controller.mediaDevices.enumerateDevices = async () => [
+    { kind: 'videoinput', deviceId: 'private', label: '' },
+    { kind: 'audioinput', deviceId: 'default', groupId: 'usb', label: 'Default USB' },
+    { kind: 'audioinput', deviceId: 'communications', groupId: 'usb', label: 'Communications USB' },
+    { kind: 'audioinput', deviceId: 'mic-usb', groupId: 'usb', label: 'USB microphone' },
+    { kind: 'audioinput', deviceId: 'mic-built-in', groupId: 'internal', label: 'Built-in microphone' },
+    { kind: 'audiooutput', deviceId: 'speaker', label: 'Speakers' },
+  ];
+  await controller.watchDevices();
+  assert.equal(captured.length, 0);
+  assert.deepEqual(controller.devices.camera, []);
+  assert.deepEqual(controller.devices.microphone.map(({ id }) => id), ['mic-usb', 'mic-built-in']);
+  await controller.selectDevice('microphone', 'mic-usb');
+  assert.equal(captured.length, 0);
+  assert.equal(controller.getSource('microphone').label, 'USB microphone');
+  controller.dispose();
+});
+
+test('only the newest device inventory wins; failures preserve known inputs and disposal removes the listener', async () => {
+  const first = deferred(), second = deferred();
+  const events = new EventTarget();
+  let calls = 0;
+  const { controller } = setup({ mediaDevices: Object.assign(events, {
+    getUserMedia: async () => stream(), enumerateDevices: () => (++calls === 1 ? first : second).promise,
+  }) });
+  const watching = controller.watchDevices();
+  events.dispatchEvent(new Event('devicechange'));
+  second.resolve([{ kind: 'videoinput', deviceId: 'new', label: 'New camera' }]);
+  await second.promise;
+  first.resolve([{ kind: 'videoinput', deviceId: 'old', label: 'Old camera' }]);
+  await watching;
+  assert.equal(controller.devices.camera[0].id, 'new');
+  events.enumerateDevices = async () => { throw new Error('Inventory unavailable'); };
+  await controller.refreshDevices();
+  assert.equal(controller.deviceListError, true);
+  assert.equal(controller.devices.camera[0].id, 'new');
+  controller.dispose();
+  events.enumerateDevices = () => { throw new Error('Listener was not removed'); };
+  events.dispatchEvent(new Event('devicechange'));
+});
+
+test('camera source selection restarts only video, negotiates native highest quality and reports its actual label', async () => {
+  const { controller, captured } = setup();
+  await controller.startCamera();
+  await controller.startMicrophone();
+  const oldCamera = controller.cameraStream, audio = controller.microphoneStream, context = controller.audioContext;
+  const replacement = cameraStream();
+  replacement.track.label = 'External camera';
+  const settings = replacement.track.getSettings.bind(replacement.track);
+  replacement.track.getSettings = () => ({ ...settings(), deviceId: 'external' });
+  controller.mediaDevices.getUserMedia = async (constraints) => {
+    assert.deepEqual(constraints.video.deviceId, { exact: 'external' });
+    assert.equal(constraints.audio, false);
+    return replacement;
+  };
+  await controller.selectDevice('camera', 'external');
+  assert.equal(oldCamera.track.readyState, 'ended');
+  assert.equal(controller.camera.status, 'active');
+  assert.equal(controller.microphoneStream, audio);
+  assert.equal(controller.audioContext, context);
+  assert.equal(captured[1].stream.track.readyState, 'live');
+  assert.equal(replacement.track.getSettings().width, 1552);
+  assert.equal(replacement.track.getSettings().height, 1552);
+  assert.equal(replacement.track.getSettings().resizeMode, 'none');
+  assert.equal(controller.getSource('camera').label, 'External camera');
+  controller.dispose();
+});
+
+test('microphone switching preserves volume and video while reacquiring maximum unprocessed audio', async () => {
+  const { controller } = setup();
+  await controller.startCamera();
+  await controller.startMicrophone();
+  controller.setVolume(2);
+  const video = controller.cameraStream, oldAudio = controller.microphoneStream, oldContext = controller.audioContext;
+  const replacement = stream('audio');
+  const changes = [];
+  replacement.track.getCapabilities = () => ({ sampleRate: { max: 96000 }, sampleSize: { max: 24 }, channelCount: { max: 2 } });
+  replacement.track.applyConstraints = async (constraints) => { changes.push(constraints); };
+  controller.mediaDevices.getUserMedia = async (constraints) => {
+    assert.deepEqual(constraints.audio.deviceId, { exact: 'usb' });
+    assert.equal(constraints.video, false);
+    return replacement;
+  };
+  await controller.selectDevice('microphone', 'usb');
+  assert.equal(oldAudio.track.readyState, 'ended');
+  assert.equal(oldContext.state, 'closed');
+  assert.equal(controller.cameraStream, video);
+  assert.equal(video.track.readyState, 'live');
+  assert.equal(controller.gain.gain.value, 2);
+  assert.deepEqual(changes[0], { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: { ideal: 0 }, sampleRate: { ideal: 96000 }, sampleSize: { ideal: 24 }, channelCount: { ideal: 2 } });
+  controller.dispose();
+});
+
+for (const name of ['camera', 'microphone']) {
+  const start = name === 'camera' ? 'startCamera' : 'startMicrophone';
+  test(`unavailable selected ${name} fails explicitly without falling back to another source`, async () => {
+    const { controller, captured } = setup();
+    await controller[start]();
+    controller.mediaDevices.getUserMedia = async (constraints) => {
+      assert.equal((constraints.video || constraints.audio).deviceId.exact, 'missing');
+      throw { name: 'OverconstrainedError', constraint: 'deviceId' };
+    };
+    await controller.selectDevice(name, 'missing');
+    assert.equal(controller[name].error, 'errorSourceMissing');
+    assert.equal(controller.selectedDevices[name], 'missing');
+    assert.equal(captured[0].stream.track.readyState, 'ended');
+    assert.equal(controller[`${name}Stream`], null);
+    controller.dispose();
+  });
+
+  test(`rapid ${name} source changes and stop invalidate all late streams`, async () => {
+    const first = deferred(), second = deferred();
+    const { controller } = setup();
+    await controller[start]();
+    let calls = 0;
+    controller.mediaDevices.getUserMedia = () => (++calls === 1 ? first : second).promise;
+    const a = controller.selectDevice(name, 'a');
+    const oldContext = controller.audioContext;
+    const b = controller.selectDevice(name, 'b');
+    if (name === 'microphone') assert.equal(oldContext.state, 'closed');
+    const current = stream(name === 'camera' ? 'video' : 'audio');
+    second.resolve(current);
+    await b;
+    assert.equal(controller[name].status, 'active');
+    controller.stopAll();
+    const late = stream(name === 'camera' ? 'video' : 'audio');
+    first.resolve(late);
+    await a;
+    assert.equal(controller[name].status, 'idle');
+    assert.equal(late.track.readyState, 'ended');
+    assert.equal(current.track.readyState, 'ended');
+    assert.equal(controller[`${name}Stream`], null);
+  });
+}
+
+test('unplugged selected input remains selected and missing; inventory changes never start another input', async () => {
+  const { controller, captured } = setup();
+  controller.mediaDevices.enumerateDevices = async () => [{ kind: 'videoinput', deviceId: 'usb', label: 'USB camera' }];
+  await controller.watchDevices();
+  await controller.selectDevice('camera', 'usb');
+  await controller.startCamera();
+  const camera = captured[0].stream;
+  camera.track.dispatchEvent(new Event('ended'));
+  controller.mediaDevices.enumerateDevices = async () => [{ kind: 'videoinput', deviceId: 'internal', label: 'Internal camera' }];
+  await controller.refreshDevices();
+  assert.equal(controller.camera.error, 'errorDisconnected');
+  assert.equal(controller.getSource('camera').missing, true);
+  assert.equal(controller.getSource('camera').label, 'USB camera');
+  assert.equal(captured.length, 1);
+  controller.dispose();
+});

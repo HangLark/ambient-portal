@@ -17,6 +17,9 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 - Direct camera preview and fullscreen viewing. Prefers the highest available native resolution, then the highest frame rate at that resolution, with actual capture settings displayed.
 - Auto, 16:9, 4:3, 1:1, and 9:16 aspect ratio negotiation. Native formats come first; unavailable formats keep the working picture, with an explicit option to allow cropping.
 - Independent camera and microphone controls, plus one action to stop all capture. Navigation and refresh release media tracks.
+- A shared control bar in desktop, phone, and fullscreen views. Start directly from the empty preview; introductory copy collapses during capture.
+- **Devices & picture** identifies the actual camera and microphone, with independent selection when multiple authorized inputs are available.
+- An audio-only view with real input levels. **Can’t hear anything?** traces microphone input, browser playback, and remote audio forwarding.
 - Microphone capture prefers the highest available sample rate, bit depth, and channel count, showing the actual specifications reported by the browser. Echo cancellation, noise suppression, and automatic gain are requested off to preserve ambient sound.
 - Low latency Web Audio monitoring, a real input level meter, and 0–200% playback volume. Monitoring starts off, with an initial playback volume of 35% when enabled.
 - English and Simplified Chinese throughout, automatic browser language selection, and a saved preference.
@@ -63,7 +66,7 @@ Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perc
 
 ### Aspect ratios
 
-Choose **Auto · best quality, 16:9, 4:3, 1:1, or 9:16** in the camera controls. While the camera is off, this only saves a preference. During capture, changes use the same track and leave microphone playback running. Rapid selections process the current negotiation and only the latest pending choice. Capture can be stopped during a switch.
+Choose **Auto · best quality, 16:9, 4:3, 1:1, or 9:16** in **Devices & picture**. While the camera is off, this only saves a preference. During capture, changes use the same track and leave microphone playback running. Rapid selections process the current negotiation and only the latest pending choice. Capture can be stopped during a switch.
 
 - Requests use `resizeMode: none` by default, preferring high resolution within the selected ratio before raising frame rate. A tolerance of about 1% accommodates near-ratio native modes such as 1760 × 1328 for 4:3.
 - Actual dimensions and mode are verified with `getSettings()`. Ignored requests, unreported native modes, or unsupported formats do not appear as successful switches. The prior picture and selection are restored; if restoration fails, a visible message explains the reset to Auto.
@@ -72,6 +75,17 @@ Choose **Auto · best quality, 16:9, 4:3, 1:1, or 9:16** in the camera controls.
 - The preview uses `object-fit: contain` to show the complete output without stretching or CSS cropping. Reload remembers the ratio preference but leaves both devices off. Each session negotiates anew; device capabilities are not cached and no model-specific resolution table is hardcoded.
 
 Capability ranges cannot enumerate all native format combinations, so quality preference is best effort, not a guarantee of the hardware’s theoretical maximum. Cameras, systems, browsers, and system camera effects can produce different results; use the actual parameters in the preview footer.
+
+### Input devices and sound checks
+
+Open **Devices & picture** above the preview for actual input names and audio specifications. An input picker appears only when the browser exposes multiple authorized sources. Reading the device list does not request capture permission. Connecting or disconnecting devices, and reopening settings, refreshes the list.
+
+- Switching a camera restarts only video; switching a microphone restarts only audio. The other channel continues, the new input negotiates maximum quality, and playback volume is preserved.
+- An unavailable selected input produces an explicit error instead of silently substituting another device. Choose an available source in settings and start again; missing selections remain identifiable. Selecting while stopped never starts capture.
+- Source choices last for this page session and are not saved in `localStorage`. Browser-provided labels may not include the full hardware model.
+- With only the microphone on, the main view shows listening status, actual source, and input level. At 0% playback volume, capture and the input meter continue; switch monitoring off to release the microphone.
+- **Quiet** means no substantial input is currently detected, not a device failure. Interrupted input, paused browser playback, and zero playback volume have distinct states. A suspended audio context does not pretend to measure input levels.
+- **Can’t hear anything?** reports the input and playback states observable by this page. **Browser playback running** does not confirm an audible system output or remote reception. Check system volume, output routing, and remote software forwarding separately.
 
 ### Remote desktop audio
 
@@ -168,7 +182,7 @@ PLAYWRIGHT_CHROMIUM=1 npm run test:e2e
 
 For Windows PowerShell, set `$env:PLAYWRIGHT_CHROMIUM="1"`, then run `npm run test:e2e`.
 
-The suite starts a production preview and checks Pages asset paths and refresh, maximum capture specifications and actual settings, aspect ratio switching and explicit crop permission, rapid requests and cancellation, 200% playback gain, independent capture controls, track cleanup, denied permissions and retry, preference persistence, keyboard select and dialog behavior, and layouts in both languages at widths of 1440, 390, and 320 pixels. Unit tests also cover ignored constraints, failed restoration, and missing capability APIs. Screenshots are saved in `test-results/`.
+The suite starts a production preview and checks Pages asset paths and refresh, maximum capture specifications and actual settings, aspect ratio switching and explicit crop permission, rapid requests and cancellation, 200% playback gain, independent capture controls, track cleanup, denied permissions and retry, preference persistence, keyboard select and dialog behavior, and layouts in both languages at widths of 1440, 390, and 320 pixels. Additional checks cover first-fold controls at 1366 × 768, reachable phone and fullscreen controls, source changes and disconnection recovery, the audio-only view, and quiet/muted/interrupted/paused sound diagnostics. Unit tests also cover inventory races, rapid device changes and late-stream cleanup, ignored constraints, failed restoration, and missing capability APIs. Screenshots are saved in `test-results/`.
 
 ## Project structure
 
@@ -190,3 +204,5 @@ No media persistence, network API, third-party fonts, or analytics. Video binds 
 References: [Vite static deployment](https://vite.dev/guide/static-deploy.html#github-pages), [GitHub Pages custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages), [MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia), [MDN AudioContext](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext).
 
 Capture and gain references: [MDN getCapabilities](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getCapabilities), [MDN applyConstraints](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/applyConstraints), [MDN getSettings](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getSettings), [MDN GainNode.gain](https://developer.mozilla.org/en-US/docs/Web/API/GainNode/gain).
+
+Device selection references: [MDN deviceId](https://developer.mozilla.org/en-US/docs/Web/API/MediaTrackConstraints/deviceId), [MDN devicechange](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/devicechange_event).

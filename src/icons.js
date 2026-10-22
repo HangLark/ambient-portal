@@ -1,5 +1,6 @@
 // Small, local line icons. No icon font, runtime dependency, or external request.
 const paths = {
+  settings: '<path d="M4 7h9m4 0h3M4 17h3m4 0h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   portal: '<path d="M5 21V10a7 7 0 0 1 14 0v11M9 21V10a3 3 0 0 1 6 0v11M3 21h18"/>',
   camera: '<path d="m15 10 5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="3"/>',
   cameraOff: '<path d="m2 2 20 20M9 6h3a3 3 0 0 1 3 3v1l5-3v10l-5-3M15 15a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V9c0-1 .5-2 1-2.5"/>',

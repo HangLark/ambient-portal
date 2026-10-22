@@ -65,6 +65,12 @@ export class MediaController {
     this.cameraFormats = null;
     this.microphoneRequest = 0;
     this.permissionListeners = [];
+    this.devices = { camera: [], microphone: [] };
+    this.selectedDevices = { camera: '', microphone: '' };
+    this.deviceNames = new Map();
+    this.deviceListError = false;
+    this.deviceListRequest = 0;
+    this.deviceChange = null;
     this.disposed = false;
   }
 
@@ -85,6 +91,62 @@ export class MediaController {
   allowCameraCrop() { return this.cameraFormats?.allowCrop() || Promise.resolve(); }
 
   emit() { if (!this.disposed) this.onChange(); }
+
+  getSource(name) {
+    const track = this[`${name}Stream`]?.getTracks()[0];
+    const selected = this.selectedDevices[name];
+    return {
+      id: track?.getSettings().deviceId || selected,
+      label: track?.label || this.deviceNames.get(`${name}:${selected}`) || '',
+      missing: Boolean(selected && !track && !this.devices[name].some(({ id }) => id === selected)),
+    };
+  }
+
+  async refreshDevices() {
+    if (this.disposed || !this.mediaDevices?.enumerateDevices) return;
+    const request = ++this.deviceListRequest;
+    try {
+      const devices = await this.mediaDevices.enumerateDevices();
+      if (this.disposed || request !== this.deviceListRequest) return;
+      for (const [name, kind] of [['camera', 'videoinput'], ['microphone', 'audioinput']]) {
+        // Empty labels are permission placeholders, not a useful device picker.
+        const inputs = devices.filter((device) => device.kind === kind && device.label && device.deviceId);
+        const physical = inputs.filter((device) => !['default', 'communications'].includes(device.deviceId));
+        this.devices[name] = inputs.filter((device) =>
+          !['default', 'communications'].includes(device.deviceId) ||
+          !physical.some((other) => device.groupId && other.groupId === device.groupId)
+        ).map((device) => ({ id: device.deviceId, label: device.label }));
+        for (const device of this.devices[name]) this.deviceNames.set(`${name}:${device.id}`, device.label);
+      }
+      this.deviceListError = false;
+    } catch {
+      if (this.disposed || request !== this.deviceListRequest) return;
+      // A failed inventory must not clear a working source or interrupt capture.
+      this.deviceListError = true;
+    }
+    this.emit();
+  }
+
+  watchDevices() {
+    if (this.disposed || this.deviceChange) return;
+    this.deviceChange = () => { void this.refreshDevices(); };
+    this.mediaDevices?.addEventListener?.('devicechange', this.deviceChange);
+    return this.refreshDevices();
+  }
+
+  selectDevice(name, id) {
+    if (this.disposed || !['camera', 'microphone'].includes(name) || typeof id !== 'string') return Promise.resolve();
+    if (id === this.selectedDevices[name]) return Promise.resolve();
+    const restart = isEngaged(this[name]);
+    this.selectedDevices[name] = id;
+    // Release only this input before reopening: some drivers cannot open two cameras at once.
+    // Existing request tokens also invalidate late permissions, format changes and audio callbacks.
+    if (name === 'camera') this.stopCamera(false);
+    else this.stopMicrophone(false);
+    if (restart) return name === 'camera' ? this.startCamera() : this.startMicrophone();
+    this.emit();
+    return Promise.resolve();
+  }
 
   async watchPermissions() {
     if (!this.permissionAPI?.query) return;
@@ -141,6 +203,7 @@ export class MediaController {
     try {
       stream = await this.mediaDevices.getUserMedia({
         video: {
+          ...(this.selectedDevices.camera ? { deviceId: { exact: this.selectedDevices.camera } } : {}),
           width: { ideal: 3840 }, height: { ideal: 2160 },
           resizeMode: { ideal: 'none' },
         },
@@ -153,6 +216,7 @@ export class MediaController {
       if (!track || track.readyState === 'ended') return this.fail('camera', 'errorDisconnected');
       this.observeTrack('camera', track, request);
       this.permissions.camera = 'granted';
+      void this.refreshDevices();
       let supported;
       try { supported = this.mediaDevices.getSupportedConstraints?.(); } catch { /* Optional API. */ }
       this.cameraFormats = new CameraFormatSession(track, {
@@ -175,7 +239,7 @@ export class MediaController {
       this.emit();
     } catch (error) {
       if (request !== this.cameraRequest) return stopTracks(stream);
-      this.fail('camera', playing ? 'errorPlayback' : mediaErrorKey(error, 'camera'));
+      this.fail('camera', playing ? 'errorPlayback' : this.inputError(error, 'camera'));
     }
   }
 
@@ -207,6 +271,7 @@ export class MediaController {
       acquiring = true;
       stream = await this.mediaDevices.getUserMedia({
         audio: {
+          ...(this.selectedDevices.microphone ? { deviceId: { exact: this.selectedDevices.microphone } } : {}),
           ...rawAudio,
           sampleRate: { ideal: 192000 },
           sampleSize: { ideal: 32 },
@@ -222,6 +287,7 @@ export class MediaController {
       if (!track || track.readyState === 'ended') return this.fail('microphone', 'errorDisconnected');
       this.observeTrack('microphone', track, request);
       this.permissions.microphone = 'granted';
+      void this.refreshDevices();
       await preferHighestAudioQuality(track);
       if (request !== this.microphoneRequest) return stopTracks(stream);
       if (track.readyState === 'ended') return this.fail('microphone', 'errorDisconnected');
@@ -244,7 +310,7 @@ export class MediaController {
       updatePlayback();
     } catch (error) {
       if (request !== this.microphoneRequest) return stopTracks(stream);
-      this.fail('microphone', acquiring ? mediaErrorKey(error, 'microphone') : 'errorAudio');
+      this.fail('microphone', acquiring ? this.inputError(error, 'microphone') : 'errorAudio');
     }
   }
 
@@ -260,6 +326,12 @@ export class MediaController {
     } catch {
       if (request === this.microphoneRequest) this.fail('microphone', 'errorAudio');
     }
+  }
+
+  inputError(error, name) {
+    if (this.selectedDevices[name] && (error?.name === 'NotFoundError' ||
+      (error?.name === 'OverconstrainedError' && error.constraint === 'deviceId'))) return 'errorSourceMissing';
+    return mediaErrorKey(error, name);
   }
 
   setVolume(value) {
@@ -304,5 +376,7 @@ export class MediaController {
     this.disposed = true;
     this.permissionListeners.forEach((remove) => remove());
     this.permissionListeners = [];
+    if (this.deviceChange) this.mediaDevices?.removeEventListener?.('devicechange', this.deviceChange);
+    this.deviceChange = null;
   }
 }

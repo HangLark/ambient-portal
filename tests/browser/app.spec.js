@@ -43,9 +43,9 @@ test('camera and microphone operate independently and stop releases every track'
   await page.getByRole('button', { name: 'Start camera' }).click();
   await expect(page.locator('#preview-status-text')).toHaveText('Live');
   await expect.poll(() => page.locator('video').evaluate((video) => video.videoWidth)).toBeGreaterThan(0);
-  await expect(page.locator('#microphone-status')).toHaveText('Off');
+  await expect(page.locator('#mic-status')).toHaveText('Microphone off');
   await page.getByRole('switch').click();
-  await expect(page.locator('#mic-status')).toHaveText('On');
+  await expect(page.locator('#playback-status')).toHaveText('Browser playback running');
   await expect(page.locator('#volume')).toBeEnabled();
   await page.locator('#volume').focus();
   await page.locator('#volume').press('ArrowRight');
@@ -59,8 +59,8 @@ test('camera and microphone operate independently and stop releases every track'
   await expect(page.locator('#volume-value')).toHaveText('0%');
   await expect(page.locator('#volume-boost-hint')).toBeHidden();
   await page.getByRole('button', { name: 'Stop camera' }).click();
-  await expect(page.locator('#microphone-status')).toHaveText('On');
-  await expect(page.locator('#preview-status-text')).toHaveText('Standby');
+  await expect(page.locator('#playback-status')).toHaveText('Playback muted · 0%');
+  await expect(page.locator('#preview-status-text')).toHaveText('Listening');
   await page.getByRole('button', { name: 'Stop everything' }).click();
   await expect(page.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
   expect(await page.evaluate(() => window.__testTracks.every((track) => track.readyState === 'ended'))).toBe(true);
@@ -72,7 +72,7 @@ test('capture prefers the highest device specifications and displays the actual 
   await page.getByRole('button', { name: 'Start camera' }).click();
   await expect(page.locator('#preview-status-text')).toHaveText('Live');
   await page.getByRole('switch').click();
-  await expect(page.locator('#mic-status')).toHaveText('On');
+  await expect(page.locator('#playback-status')).toHaveText('Browser playback running');
   const tracks = await page.evaluate(() => window.__testTracks.map((track) => ({
     kind: track.kind, capabilities: track.getCapabilities(), constraints: track.getConstraints(), settings: track.getSettings(),
   })));
@@ -104,7 +104,7 @@ test('capture prefers the highest device specifications and displays the actual 
 test('active audio specifications and amplified volume fit both languages on desktop and mobile', async ({ page }, testInfo) => {
   await page.goto('./');
   await page.getByRole('switch').click();
-  await expect(page.locator('#mic-status')).toHaveText('On');
+  await expect(page.locator('#playback-status')).toHaveText('Browser playback running');
   await page.locator('#volume').focus();
   await page.locator('#volume').press('End');
   for (const [name, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844], ['narrow', 320, 760]]) {
@@ -113,7 +113,7 @@ test('active audio specifications and amplified volume fit both languages on des
       if (await page.locator('html').getAttribute('lang') !== language) await page.locator('#language').click();
       await expect(page.locator('#volume-value')).toHaveText('200%');
       await expect(page.locator('#volume-boost-hint')).toContainText(language === 'en-US' ? 'Above 100%' : '超过 100%');
-      await expect(page.locator('#audio-detail')).toBeVisible();
+      await expect(page.locator('#audio-scene')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(`boost-${name}-${language}.png`), fullPage: true });
     }
@@ -126,10 +126,10 @@ test('active audio specifications and amplified volume fit both languages on des
 test('microphone can start before the camera and pagehide releases it', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('switch').click();
-  await expect(page.locator('#mic-status')).toHaveText('On');
-  await expect(page.locator('#camera-status')).toHaveText('Off');
+  await expect(page.locator('#playback-status')).toHaveText('Browser playback running');
+  await expect(page.locator('#camera-button')).toHaveText('Start camera');
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
-  await expect(page.locator('#mic-status')).toHaveText('Off');
+  await expect(page.locator('#mic-status')).toHaveText('Microphone off');
   expect(await page.evaluate(() => window.__testTracks.every((track) => track.readyState === 'ended'))).toBe(true);
 });
 
