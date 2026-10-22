@@ -8,9 +8,16 @@ English · [简体中文](README.md)
 
 ![Ambient Portal desktop interface](docs/preview.en-US.png)
 
+<details>
+<summary>Preview the light theme</summary>
+
+![Ambient Portal light interface](docs/preview.light.en-US.png)
+
+</details>
+
 Ambient Portal is a lightweight, browser-only window into the environment around a device. Open it on a computer you control remotely to preview its camera and play its microphone through the local browser. A remote desktop app such as UU Remote forwards the screen and system audio to your other device.
 
-Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accounts, database, or production runtime dependencies. No media recording, storage, or uploading. Only language and aspect ratio preferences persist in this browser’s `localStorage`.
+Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accounts, database, or production runtime dependencies. No media recording, storage, or uploading. Only language, appearance, and aspect ratio preferences persist in this browser’s `localStorage`.
 
 ## Features
 
@@ -23,7 +30,7 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 - Microphone capture prefers the highest available sample rate, bit depth, and channel count, showing the actual specifications reported by the browser. Echo cancellation, noise suppression, and automatic gain are requested off to preserve ambient sound.
 - Low latency Web Audio monitoring, a real input level meter, and 0–200% playback volume. Monitoring starts off, with an initial playback volume of 35% when enabled.
 - English and Simplified Chinese throughout, automatic browser language selection, and a saved preference.
-- A restrained dark interface, responsive desktop and mobile layouts, keyboard controls, and reduced motion support.
+- Light and dark themes with automatic system appearance, responsive desktop and mobile layouts, keyboard controls, and reduced motion support.
 - Actionable states for denied permissions, missing or busy devices, interrupted signals, and paused audio.
 - Cancel pending requests safely: if permission arrives after cancellation, its stream is immediately released.
 
@@ -55,6 +62,12 @@ Production preview: `http://127.0.0.1:4173/ambient-portal/`. The preview server 
 3. If playback is paused by the browser, click **Resume audio**. Start at a low volume and adjust as needed.
 4. **Stop camera** stops video only. The microphone switch stops monitoring only. **Stop everything** releases both devices.
 5. Leaving or refreshing the page also stops capture. Saved browser permission never starts capture automatically on your next visit.
+
+### Appearance
+
+Use the appearance icon at the top right to choose **System, Light, or Dark**. The default is System, which updates as your system appearance changes. Manual choices are remembered, and you can return to System anytime. If local storage is blocked, the choice still works for the current page session.
+
+Changing appearance keeps camera and microphone capture running, preserves capture quality and playback volume, and leaves the live picture free of color filters. On reload, the preference is applied before the app loads to avoid briefly showing the other palette.
 
 ### Capture quality and volume
 
@@ -152,7 +165,7 @@ If you rename the repository, switch to a root user site, or add a custom domain
 - Both Actions jobs succeed and the Pages URL loads.
 - Direct navigation and refresh at `/ambient-portal/` load all JS, CSS, and SVG resources without 404s.
 - Camera preview and independent microphone monitoring work after explicit permission on HTTPS; stopping ends the browser’s capture indicators.
-- Language preference survives a refresh while all capture stays off.
+- Language and appearance preferences survive a refresh while all capture stays off; System appearance responds to system changes.
 - The controlling device receives the monitored audio with remote system audio forwarding enabled.
 
 Local production builds and synthetic-device browser tests do not replace an actual workflow run in your repository, physical-device permission checks, or testing your remote desktop audio route.
@@ -184,6 +197,8 @@ For Windows PowerShell, set `$env:PLAYWRIGHT_CHROMIUM="1"`, then run `npm run te
 
 The suite starts a production preview and checks Pages asset paths and refresh, maximum capture specifications and actual settings, aspect ratio switching and explicit crop permission, rapid requests and cancellation, 200% playback gain, independent capture controls, track cleanup, denied permissions and retry, preference persistence, keyboard select and dialog behavior, and layouts in both languages at widths of 1440, 390, and 320 pixels. Additional checks cover first-fold controls at 1366 × 768, reachable phone and fullscreen controls, source changes and disconnection recovery, the audio-only view, and quiet/muted/interrupted/paused sound diagnostics. Unit tests also cover inventory races, rapid device changes and late-stream cleanup, ignored constraints, failed restoration, and missing capability APIs. Screenshots are saved in `test-results/`.
 
+Appearance tests also cover system changes, manual overrides and reloads, the palette before the application script loads, blocked local storage, bilingual layouts and dialogs in both themes, and uninterrupted capture, camera format, and playback gain while switching themes.
+
 ## Project structure
 
 ```text
@@ -193,7 +208,7 @@ src/
   camera-format.js Ratio negotiation, serialized switching, verification, and recovery
   i18n.js          Local dictionaries, language detection, and preference storage
   icons.js         Local SVG line icons
-  style.css        Responsive dark interface
+  style.css        Responsive light and dark interface
 public/portal.svg  Brand icon
 tests/             Lifecycle and browser tests
 .github/workflows/deploy.yml

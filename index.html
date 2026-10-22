@@ -4,6 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101113" />
+    <style>
+      :root { --page-bg: #101113; background: var(--page-bg); color-scheme: dark; }
+      :root[data-theme='light'] { --page-bg: #f7f7f9; color-scheme: light; }
+    </style>
+    <script>
+      // Apply the saved appearance before loading the app, so reloads do not flash the other theme.
+      (() => {
+        let preference = 'system';
+        try {
+          const saved = localStorage.getItem('ambient-portal.theme');
+          if (saved === 'light' || saved === 'dark') preference = saved;
+        } catch { /* Storage is optional. */ }
+        const root = document.documentElement;
+        root.dataset.themePreference = preference;
+        root.dataset.theme = preference === 'system'
+          ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : preference;
+        document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--page-bg').trim();
+      })();
+    </script>
     <meta name="description" content="A quiet window into your surroundings. Preview your camera and listen to your microphone, right in your browser. Nothing recorded or uploaded." />
     <link rel="icon" type="image/svg+xml" href="/portal.svg" />
     <title>Ambient Portal</title>

@@ -7,6 +7,9 @@ import { CAMERA_FORMATS, cameraRatioLabel, cameraModeLabel, loadCameraFormat, sa
 let storage;
 try { storage = window.localStorage; } catch { /* Storage is optional. */ }
 let language = detectLanguage(storage, navigator.languages || [navigator.language]);
+const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+let themePreference = document.documentElement.dataset.themePreference || 'system';
+const themeOptions = [['system', 'themeSystem', 'monitor'], ['light', 'themeLight', 'sun'], ['dark', 'themeDark', 'moon']];
 const t = (key) => translate(language, key);
 const label = (key) => `<span data-i18n="${key}">${t(key)}</span>`;
 const bars = (count) => '<i></i>'.repeat(count);
@@ -16,7 +19,15 @@ document.querySelector('#app').innerHTML = `
   <a class="skip-link" href="#controls">${label('skip')}</a>
   <header class="site-header"><div class="header-inner">
     <a class="brand" href="./" aria-label="Ambient Portal">${icon('portal', 'brand-symbol')}<span>Ambient<span class="brand-light"> Portal</span></span></a>
-    <button class="language-button" id="language" type="button">${icon('globe')}<span id="language-label"></span></button>
+    <div class="header-actions">
+      <details class="theme-control" id="theme-control">
+        <summary class="theme-button" id="theme-button"></summary>
+        <fieldset class="theme-options"><legend>${label('theme')}</legend>
+          ${themeOptions.map(([value, key, glyph]) => `<label><input type="radio" name="theme" value="${value}" />${icon(glyph)}${label(key)}</label>`).join('')}
+        </fieldset>
+      </details>
+      <button class="language-button" id="language" type="button">${icon('globe')}<span id="language-label"></span></button>
+    </div>
   </div></header>
   <main class="main-content">
     <section class="intro" aria-labelledby="heading"><p class="eyebrow">${label('eyebrow')}</p><h1 id="heading">${label('heading')}</h1><p class="intro-description">${label('intro')}</p></section>
@@ -276,6 +287,20 @@ function updateMeter() {
   }
 }
 
+function applyTheme() {
+  const root = document.documentElement;
+  const theme = themePreference === 'system' ? (systemTheme.matches ? 'dark' : 'light') : themePreference;
+  root.dataset.themePreference = themePreference;
+  root.dataset.theme = theme;
+  const [, key, glyph] = themeOptions.find(([value]) => value === themePreference);
+  const current = `${t('theme')}: ${t(key)}${themePreference === 'system' ? ` · ${t(theme === 'dark' ? 'themeDark' : 'themeLight')}` : ''}`;
+  $('theme-button').innerHTML = icon(glyph);
+  $('theme-button').setAttribute('aria-label', current);
+  $('theme-button').title = current;
+  document.querySelectorAll('input[name="theme"]').forEach((input) => { input.checked = input.value === themePreference; });
+  document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--page-bg').trim();
+}
+
 function applyLanguage() {
   document.documentElement.lang = language;
   document.title = t('pageTitle');
@@ -285,9 +310,29 @@ function applyLanguage() {
   $('language').title = t('language');
   $('controls').setAttribute('aria-label', t('controls'));
   video.setAttribute('aria-label', t('preview'));
+  applyTheme();
   render();
 }
 
+document.querySelectorAll('input[name="theme"]').forEach((input) => input.addEventListener('change', () => {
+  themePreference = input.value;
+  try { storage?.setItem('ambient-portal.theme', themePreference); } catch { /* Keep the choice for this session. */ }
+  applyTheme();
+}));
+const followSystemTheme = () => { if (themePreference === 'system') applyTheme(); };
+systemTheme.addEventListener('change', followSystemTheme);
+const dismissTheme = (event) => { if (!$('theme-control').contains(event.target)) $('theme-control').open = false; };
+const closeThemeWithEscape = (event) => {
+  if (event.key === 'Escape' && $('theme-control').open) {
+    $('theme-control').open = false;
+    $('theme-button').focus({ preventScroll: true });
+  }
+};
+document.addEventListener('click', dismissTheme);
+document.addEventListener('keydown', closeThemeWithEscape);
+$('theme-control').addEventListener('focusout', (event) => {
+  if (event.relatedTarget && !$('theme-control').contains(event.relatedTarget)) $('theme-control').open = false;
+});
 $('language').addEventListener('click', () => { language = language === 'en-US' ? 'zh-CN' : 'en-US'; saveLanguage(storage, language); applyLanguage(); });
 $('camera-button').addEventListener('click', () => isEngaged(media.camera) ? media.stopCamera() : media.startCamera());
 for (const id of ['empty-start', 'add-camera']) $(id).addEventListener('click', () => { $('camera-button').focus({ preventScroll: true }); void media.startCamera(); });
@@ -322,7 +367,12 @@ for (const [trigger, dialog] of [['guide-open', 'guide-dialog'], ['settings-open
 }
 document.addEventListener('visibilitychange', () => { updateMeter(); renderSound(); if (!document.hidden) void media.refreshDevices(); });
 window.addEventListener('pagehide', () => media.stopAll());
-if (import.meta.hot) import.meta.hot.dispose(() => { media.dispose(); cancelAnimationFrame(levelFrame); });
+if (import.meta.hot) import.meta.hot.dispose(() => {
+  media.dispose(); cancelAnimationFrame(levelFrame);
+  systemTheme.removeEventListener('change', followSystemTheme);
+  document.removeEventListener('click', dismissTheme);
+  document.removeEventListener('keydown', closeThemeWithEscape);
+});
 applyLanguage();
 void media.watchPermissions();
 void media.watchDevices();

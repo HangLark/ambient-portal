@@ -1,5 +1,9 @@
 export const dictionaries = {
   'en-US': {
+    theme: 'Appearance',
+    themeSystem: 'System',
+    themeLight: 'Light',
+    themeDark: 'Dark',
     openCamera: "Open camera",
     addCamera: "Add a camera view",
     listen: "Listen",
@@ -150,6 +154,10 @@ export const dictionaries = {
     errorFullscreen: 'Fullscreen is unavailable here. You can still use the preview in this window.',
   },
   'zh-CN': {
+    theme: '外观',
+    themeSystem: '跟随系统',
+    themeLight: '浅色',
+    themeDark: '深色',
     openCamera: "打开画面",
     addCamera: "同时开启画面",
     listen: "监听",
