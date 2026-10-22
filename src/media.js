@@ -1,6 +1,45 @@
 const idleDevice = () => ({ status: 'idle', error: null, muted: false });
 const stopTracks = (stream) => stream?.getTracks().forEach((track) => track.stop());
 export const isEngaged = (device) => ['requesting', 'active', 'paused'].includes(device.status);
+export const MAX_VOLUME = 2;
+
+const rawAudio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+const positive = (value) => Number.isFinite(value) && value > 0;
+
+async function preferHighestQuality(track, kind, isCurrent) {
+  if (!track.getCapabilities || !track.applyConstraints) return;
+  try {
+    const capabilities = track.getCapabilities();
+    const constraints = kind === 'audio' ? { ...rawAudio, latency: { ideal: 0 } } : {};
+    const properties = kind === 'video' ? ['width', 'height'] : ['sampleRate', 'sampleSize', 'channelCount'];
+    for (const property of properties) {
+      const maximum = capabilities[property]?.max;
+      if (positive(maximum)) constraints[property] = { ideal: maximum };
+    }
+    if (kind === 'video' && capabilities.resizeMode?.includes('none')) {
+      constraints.resizeMode = { exact: 'none' };
+    }
+    if (!Object.keys(constraints).length) return;
+    await track.applyConstraints(constraints);
+    if (!isCurrent()) return;
+
+    // Resolution comes first. Only raise frame rate within the negotiated native dimensions.
+    if (kind === 'video' && positive(capabilities.frameRate?.max)) {
+      const settings = track.getSettings();
+      if (positive(settings.width) && positive(settings.height)) {
+        await track.applyConstraints({
+          ...constraints,
+          width: { exact: settings.width },
+          height: { exact: settings.height },
+          frameRate: { ideal: capabilities.frameRate.max },
+        });
+      }
+    }
+  } catch {
+    // Capabilities describe ranges, not every valid combination. Keep the working stream
+    // if a driver rejects an upgrade; ended tracks and cancelled requests are checked by the caller.
+  }
+}
 
 export function mediaErrorKey(error, device) {
   switch (error?.name) {
@@ -101,7 +140,10 @@ export class MediaController {
     let playing = false;
     try {
       stream = await this.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+        video: {
+          width: { ideal: 3840 }, height: { ideal: 2160 },
+          frameRate: { ideal: 60 }, resizeMode: { ideal: 'none' },
+        },
         audio: false,
       });
       // A permission prompt cannot be aborted. A late result must never revive a stopped session.
@@ -111,6 +153,9 @@ export class MediaController {
       if (!track || track.readyState === 'ended') return this.fail('camera', 'errorDisconnected');
       this.observeTrack('camera', track, request);
       this.permissions.camera = 'granted';
+      await preferHighestQuality(track, 'video', () => request === this.cameraRequest);
+      if (request !== this.cameraRequest) return stopTracks(stream);
+      if (track.readyState === 'ended') return this.fail('camera', 'errorDisconnected');
       this.video.muted = true;
       this.video.srcObject = stream;
       playing = true;
@@ -151,10 +196,10 @@ export class MediaController {
       acquiring = true;
       stream = await this.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: false,
-          channelCount: { ideal: 1 },
+          ...rawAudio,
+          sampleRate: { ideal: 192000 },
+          sampleSize: { ideal: 32 },
+          channelCount: { ideal: 2 },
           latency: { ideal: 0 },
         },
         video: false,
@@ -166,6 +211,9 @@ export class MediaController {
       if (!track || track.readyState === 'ended') return this.fail('microphone', 'errorDisconnected');
       this.observeTrack('microphone', track, request);
       this.permissions.microphone = 'granted';
+      await preferHighestQuality(track, 'audio', () => request === this.microphoneRequest);
+      if (request !== this.microphoneRequest) return stopTracks(stream);
+      if (track.readyState === 'ended') return this.fail('microphone', 'errorDisconnected');
       this.source = context.createMediaStreamSource(stream);
       this.analyser = context.createAnalyser();
       this.analyser.fftSize = 256;
@@ -205,7 +253,7 @@ export class MediaController {
 
   setVolume(value) {
     if (!Number.isFinite(value)) return;
-    this.volume = Math.min(1, Math.max(0, value));
+    this.volume = Math.min(MAX_VOLUME, Math.max(0, value));
     if (this.gain) this.gain.gain.setTargetAtTime(this.volume, this.audioContext.currentTime, 0.015);
   }
 

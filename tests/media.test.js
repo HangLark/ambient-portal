@@ -127,11 +127,11 @@ test('cancelled requests cannot replace idle state with a late rejection', async
 });
 
 test('stopping during video.play never revives the preview', async () => {
-  const play = deferred();
+  const play = deferred(), entered = deferred();
   const { controller, video, captured } = setup();
-  video.play = () => play.promise;
+  video.play = () => { entered.resolve(); return play.promise; };
   const starting = controller.startCamera();
-  await Promise.resolve();
+  await entered.promise;
   controller.stopCamera();
   play.resolve();
   await starting;
@@ -291,4 +291,148 @@ test('repeated starts do not allocate duplicate streams and stop is idempotent',
   controller.stopAll();
   controller.stopAll();
   assert.ok(captured.every(({ stream }) => stream.track.stops === 1));
+});
+
+test('camera prioritizes native resolution above 4K before maximizing frame rate at that resolution', async () => {
+  const input = stream();
+  const applied = [];
+  let settings = { width: 3840, height: 2160, frameRate: 60 };
+  input.track.getCapabilities = () => ({
+    width: { max: 7680 }, height: { max: 4320 }, frameRate: { max: 120 },
+    resizeMode: ['none', 'crop-and-scale'],
+  });
+  input.track.getSettings = () => settings;
+  input.track.applyConstraints = async (constraints) => {
+    applied.push(constraints);
+    if (constraints.frameRate) {
+      // This camera supports 120 fps only at lower resolutions, and 30 fps at 8K.
+      assert.equal(constraints.width.exact, 7680);
+      assert.equal(constraints.height.exact, 4320);
+      assert.equal(constraints.frameRate.ideal, 120);
+      settings = { width: 7680, height: 4320, frameRate: 30 };
+    } else {
+      assert.equal(constraints.width.ideal, 7680);
+      assert.equal(constraints.height.ideal, 4320);
+      assert.equal(constraints.resizeMode.exact, 'none');
+      settings = { width: 7680, height: 4320, frameRate: 15 };
+    }
+  };
+  const { controller, video } = setup({ mediaDevices: { getUserMedia: async () => input } });
+  await controller.startCamera();
+  assert.equal(applied.length, 2);
+  assert.equal(controller.camera.status, 'active');
+  assert.equal(video.srcObject, input);
+  assert.deepEqual(input.track.getSettings(), { width: 7680, height: 4320, frameRate: 30 });
+  controller.dispose();
+});
+
+test('microphone requests unprocessed capture at the highest reported audio specifications', async () => {
+  const input = stream('audio');
+  const applied = [];
+  let requested;
+  input.track.getCapabilities = () => ({
+    sampleRate: { max: 96000 }, sampleSize: { max: 24 }, channelCount: { max: 4 },
+  });
+  input.track.applyConstraints = async (constraints) => { applied.push(constraints); };
+  const { controller } = setup({ mediaDevices: { getUserMedia: async (constraints) => {
+    requested = constraints;
+    return input;
+  } } });
+  await controller.startMicrophone();
+  assert.equal(controller.microphone.status, 'active');
+  assert.equal(requested.video, false);
+  for (const constraints of [requested.audio, ...applied]) {
+    assert.equal(constraints.echoCancellation, false);
+    assert.equal(constraints.noiseSuppression, false);
+    assert.equal(constraints.autoGainControl, false);
+  }
+  assert.equal(applied.length, 1);
+  assert.deepEqual(applied[0].sampleRate, { ideal: 96000 });
+  assert.deepEqual(applied[0].sampleSize, { ideal: 24 });
+  assert.deepEqual(applied[0].channelCount, { ideal: 4 });
+  controller.dispose();
+});
+
+for (const kind of ['video', 'audio']) {
+  const device = kind === 'video' ? 'camera' : 'microphone';
+  const start = kind === 'video' ? 'startCamera' : 'startMicrophone';
+
+  test(`${device} keeps a usable stream when a quality upgrade is rejected`, async () => {
+    const input = stream(kind);
+    input.track.getCapabilities = () => ({ width: { max: 7680 }, height: { max: 4320 } });
+    input.track.applyConstraints = async () => { throw { name: 'OverconstrainedError' }; };
+    const { controller } = setup({ mediaDevices: { getUserMedia: async () => input } });
+    await controller[start]();
+    assert.equal(controller[device].status, 'active');
+    assert.equal(input.track.readyState, 'live');
+    controller.dispose();
+    assert.equal(input.track.readyState, 'ended');
+  });
+
+  test(`stopping ${device} during quality negotiation releases resources and cannot replace a new session`, async () => {
+    const upgrading = deferred(), entered = deferred();
+    const old = stream(kind), current = stream(kind);
+    let calls = 0, upgrades = 0;
+    old.track.getCapabilities = () => ({ width: { max: 7680 }, frameRate: { max: 120 } });
+    old.track.applyConstraints = () => { upgrades++; entered.resolve(); return upgrading.promise; };
+    const { controller, video } = setup({ mediaDevices: { getUserMedia: async () => ++calls === 1 ? old : current } });
+    const starting = controller[start]();
+    await entered.promise;
+    const oldContext = controller.audioContext;
+    controller.stopAll();
+    assert.equal(old.track.readyState, 'ended');
+    assert.equal(video.srcObject, null);
+    assert.equal(controller.audioContext, null);
+    if (oldContext) assert.equal(oldContext.state, 'closed');
+    await controller[start]();
+    const currentContext = controller.audioContext;
+    upgrading.resolve();
+    await starting;
+    assert.equal(upgrades, 1);
+    assert.equal(controller[device].status, 'active');
+    assert.equal(current.track.readyState, 'live');
+    if (kind === 'video') assert.equal(video.srcObject, current);
+    else {
+      assert.equal(controller.microphoneStream, current);
+      assert.equal(controller.audioContext, currentContext);
+      assert.equal(currentContext.state, 'running');
+    }
+    controller.dispose();
+  });
+
+  test(`${device} disconnect during quality negotiation stays disconnected`, async () => {
+    const upgrading = deferred(), entered = deferred();
+    const input = stream(kind);
+    input.track.getCapabilities = () => ({ width: { max: 3840 } });
+    input.track.applyConstraints = () => { entered.resolve(); return upgrading.promise; };
+    const { controller, video } = setup({ mediaDevices: { getUserMedia: async () => input } });
+    const starting = controller[start]();
+    await entered.promise;
+    input.track.readyState = 'ended';
+    input.track.dispatchEvent(new Event('ended'));
+    upgrading.resolve();
+    await starting;
+    assert.equal(controller[device].error, 'errorDisconnected');
+    assert.equal(video.srcObject, null);
+    assert.ok(!controller.audioContext);
+  });
+}
+
+test('playback gain reaches 200%, is bounded, and survives an in-session microphone restart', async () => {
+  const { controller } = setup();
+  await controller.startMicrophone();
+  assert.equal(controller.gain.gain.value, 0.35);
+  controller.setVolume(2);
+  assert.equal(controller.gain.gain.value, 2);
+  controller.setVolume(3);
+  assert.equal(controller.volume, 2);
+  assert.equal(controller.gain.gain.value, 2);
+  controller.setVolume(NaN);
+  assert.equal(controller.volume, 2);
+  controller.stopMicrophone();
+  await controller.startMicrophone();
+  assert.equal(controller.gain.gain.value, 2);
+  controller.setVolume(-1);
+  assert.equal(controller.gain.gain.value, 0);
+  controller.dispose();
 });

@@ -1,7 +1,7 @@
 import './style.css';
 import { icon } from './icons.js';
 import { detectLanguage, saveLanguage, translate } from './i18n.js';
-import { MediaController, isEngaged } from './media.js';
+import { MediaController, isEngaged, MAX_VOLUME } from './media.js';
 
 let storage;
 try { storage = window.localStorage; } catch { /* The app also works without storage. */ }
@@ -54,10 +54,12 @@ document.querySelector('#app').innerHTML = `
         </div>
         <div class="device-control microphone-control">
           <div class="device-row"><div class="device-icon">${icon('mic')}</div><div class="device-label"><h3>${label('microphone')}</h3><p>${label('audioInput')}</p></div><button class="switch" id="microphone-switch" type="button" role="switch" aria-checked="false" aria-describedby="sound-advice"><span></span></button></div>
+          <p class="capture-detail" id="audio-detail" hidden></p>
           <div class="meter-heading"><span>${label('level')}</span><span class="mic-status" id="mic-status" role="status"></span></div>
           <div class="level-meter" id="level-meter" aria-hidden="true">${'<i></i>'.repeat(32)}</div>
           <div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">35%</output></div>
-          <div class="volume-control">${icon('volume')}<input id="volume" type="range" min="0" max="100" value="35" step="1" /></div>
+          <div class="volume-control">${icon('volume')}<input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="35" step="1" aria-describedby="volume-boost-hint" /></div>
+          <p class="volume-boost-hint" id="volume-boost-hint" role="status" hidden>${label('volumeBoostHint')}</p>
           <button class="resume-button" id="resume-audio" type="button" hidden>${icon('play')}${label('resumeAudio')}</button>
           <p class="mic-error" id="mic-error" role="alert" hidden></p>
         </div>
@@ -122,8 +124,9 @@ function render() {
   $('portal-illustration').classList.toggle('is-pending', cameraBusy);
   $('feed-label').textContent = t(cameraActive ? 'localFeed' : 'noFeed');
   const settings = media.cameraStream?.getVideoTracks()[0]?.getSettings();
+  const frameRate = settings?.frameRate ? `${Math.round(settings.frameRate * 10) / 10} ${t('fps')}` : '';
   $('preview-detail').textContent = cameraActive && settings?.width && settings?.height
-    ? `${settings.width} × ${settings.height} · ${t('directPreview')}` : t('directPreview');
+    ? [`${settings.width} × ${settings.height}`, frameRate, t('directPreview')].filter(Boolean).join(' · ') : t('directPreview');
   $('controls-title').textContent = t(media.engaged ? 'sessionActive' : 'sessionIdle');
   $('camera-pill').textContent = t(stateLabel(camera));
   $('camera-pill').dataset.state = cameraState;
@@ -138,10 +141,20 @@ function render() {
   $('microphone-switch').disabled = Boolean(media.unavailable);
   $('mic-status').textContent = t(stateLabel(mic));
   $('mic-status').dataset.state = mic.status;
+  const audioSettings = media.microphoneStream?.getAudioTracks()[0]?.getSettings() || {};
+  const audioDetails = [
+    audioSettings.sampleRate && `${audioSettings.sampleRate / 1000} kHz`,
+    audioSettings.sampleSize && `${audioSettings.sampleSize} ${t('bitDepth')}`,
+    audioSettings.channelCount && `${audioSettings.channelCount} ${t('channels')}`,
+  ].filter(Boolean);
+  $('audio-detail').hidden = !['active', 'paused'].includes(mic.status) || !audioDetails.length;
+  $('audio-detail').textContent = audioDetails.join(' · ');
   $('volume').disabled = !['active', 'paused'].includes(mic.status);
   $('volume-value').textContent = `${Math.round(media.volume * 100)}%`;
-  $('volume').style.setProperty('--volume', `${media.volume * 100}%`);
+  $('volume').style.setProperty('--volume', `${media.volume / MAX_VOLUME * 100}%`);
   $('volume').setAttribute('aria-valuetext', `${Math.round(media.volume * 100)}%`);
+  $('volume-value').classList.toggle('is-boosted', media.volume > 1);
+  $('volume-boost-hint').hidden = media.volume <= 1 || !['active', 'paused'].includes(mic.status);
   $('resume-audio').hidden = mic.status !== 'paused';
   $('mic-error').hidden = !mic.error;
   $('mic-error').textContent = mic.error ? t(mic.error) : '';
@@ -219,6 +232,7 @@ $('fullscreen').addEventListener('click', async () => {
   render();
 });
 document.addEventListener('fullscreenchange', render);
+video.addEventListener('resize', render);
 $('guide-open').addEventListener('click', () => $('guide-dialog').showModal());
 $('guide-dialog').addEventListener('click', (event) => {
   if (event.target !== $('guide-dialog')) return;

@@ -14,9 +14,10 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 
 ## Features
 
-- Direct camera preview and fullscreen viewing. Requests 1280 × 720 at 30 fps as preferences; actual settings depend on the device.
+- Direct camera preview and fullscreen viewing. Prefers the highest available native resolution, then the highest frame rate at that resolution, with actual capture settings displayed.
 - Independent camera and microphone controls, plus one action to stop all capture. Navigation and refresh release media tracks.
-- Low latency Web Audio monitoring, a real input level meter, and adjustable playback volume. Monitoring starts off, with an initial playback volume of 35% when enabled.
+- Microphone capture prefers the highest available sample rate, bit depth, and channel count, showing the actual specifications reported by the browser. Echo cancellation, noise suppression, and automatic gain are requested off to preserve ambient sound.
+- Low latency Web Audio monitoring, a real input level meter, and 0–200% playback volume. Monitoring starts off, with an initial playback volume of 35% when enabled.
 - English and Simplified Chinese throughout, automatic browser language selection, and a saved preference.
 - A restrained dark interface, responsive desktop and mobile layouts, keyboard controls, and reduced motion support.
 - Actionable states for denied permissions, missing or busy devices, interrupted signals, and paused audio.
@@ -51,13 +52,21 @@ Production preview: `http://127.0.0.1:4173/ambient-portal/`. The preview server 
 4. **Stop camera** stops video only. The microphone switch stops monitoring only. **Stop everything** releases both devices.
 5. Leaving or refreshing the page also stops capture. Saved browser permission never starts capture automatically on your next visit.
 
+### Capture quality and volume
+
+After capture starts, the app reads the track’s `getCapabilities()` and uses `applyConstraints()` to prefer the highest available settings. The camera favors native frames without cropping or scaling to reach a requested resolution, then raises frame rate while preserving the negotiated dimensions. The microphone prefers the highest reported sample rate, bit depth, and channel count. When capability queries are unavailable, high initial preferences are used; if a driver rejects an upgrade, the existing usable stream is retained.
+
+Capability ranges do not guarantee every combination is available. The interface therefore displays actual `getSettings()` values and omits unreported fields. The browser and audio output device may resample audio or mix channels, and remote desktop software may compress both video and audio. Maximum capture specifications do not guarantee lossless reception on the remote device.
+
+Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perceived loudness. Above 100%, the interface highlights distortion and feedback risks. Strong signals may clip, so lower volume if needed. Capture quality and playback volume are independent: the default 35% playback level does not reduce capture quality.
+
 ### Remote desktop audio
 
 Ambient Portal does not stream media over the network. Enable **system audio / computer sound forwarding from the controlled device** in UU Remote or your remote desktop app. Names, support, and output routing depend on that software and the operating system.
 
 - Enable both microphone monitoring here and system audio forwarding in your remote app. Voice chat or forwarding the controlling device’s microphone is a different feature.
 - Playback happens on the controlled device. Use **headphones on that device**, or a suitable virtual output that your remote software can capture. Otherwise its microphone may pick up its own speakers, creating echo or feedback. Headphones only on the controlling device do not prevent this loop.
-- Browser echo cancellation and noise suppression are requested; automatic gain is disabled. Processing depends on the device, may soften some ambient sounds, and cannot guarantee feedback prevention.
+- Echo cancellation, noise suppression, and automatic gain are requested off to preserve ambient sound; actual processing support depends on the device and browser. Avoid routing speaker output back into the microphone, especially when amplifying playback.
 - Muting the controlled computer or browser may also silence forwarded audio. Check browser, system, and remote app volume and routing. Test with low volume first.
 - Keep the controlled device awake and the browser and page open. Sleep, browser background limits, or device changes may interrupt capture or playback. The UI reflects track interruptions and audio suspension; mobile background behavior is browser-dependent.
 
@@ -146,7 +155,7 @@ PLAYWRIGHT_CHROMIUM=1 npm run test:e2e
 
 For Windows PowerShell, set `$env:PLAYWRIGHT_CHROMIUM="1"`, then run `npm run test:e2e`.
 
-The suite starts a production preview and checks Pages asset paths and refresh, independent capture controls, track cleanup, denied permissions and retry, language persistence, keyboard dialog behavior, and layouts in both languages at widths of 1440, 390, and 320 pixels. Screenshots are saved in `test-results/`.
+The suite starts a production preview and checks Pages asset paths and refresh, maximum capture specifications and actual settings, 200% playback gain, independent capture controls, track cleanup, denied permissions and retry, language persistence, keyboard dialog behavior, and layouts in both languages at widths of 1440, 390, and 320 pixels. Screenshots are saved in `test-results/`.
 
 ## Project structure
 
@@ -165,3 +174,5 @@ tests/             Lifecycle and browser tests
 No media persistence, network API, third-party fonts, or analytics. Video binds directly to a muted `<video>`. Audio follows `MediaStream → AnalyserNode → GainNode → AudioContext.destination`, without encoding, recording, or a network round trip. Normal requests for static website assets are served by the hosting platform.
 
 References: [Vite static deployment](https://vite.dev/guide/static-deploy.html#github-pages), [GitHub Pages custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages), [MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia), [MDN AudioContext](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext).
+
+Capture and gain references: [MDN getCapabilities](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getCapabilities), [MDN applyConstraints](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/applyConstraints), [MDN getSettings](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getSettings), [MDN GainNode.gain](https://developer.mozilla.org/en-US/docs/Web/API/GainNode/gain).

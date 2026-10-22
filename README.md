@@ -14,9 +14,10 @@ Vite + 原生 JavaScript + 浏览器 Web API。无后端、账号、数据库或
 
 ## 功能
 
-- 摄像头直连实时预览、全屏查看；默认请求 1280 × 720、30 fps，设备能力优先，不强制分辨率。
+- 摄像头直连实时预览、全屏查看；默认优先设备支持的最高原生分辨率，再争取该分辨率下的最高帧率，显示实际采集参数。
 - 摄像头与麦克风独立开关，一键停止全部采集；刷新、离开网页时释放媒体轨道。
-- 低延迟 Web Audio 麦克风回放、真实输入电平、可调回放音量；默认关闭，开启后的初始音量为 35%。
+- 麦克风优先最高采样率、位深与声道数，显示浏览器报告的实际规格；请求关闭回声消除、降噪和自动增益，保留环境原声。
+- 低延迟 Web Audio 麦克风回放、真实输入电平、0–200% 回放音量；默认关闭，开启后的初始音量为 35%。
 - 中英双语、浏览器语言检测、偏好持久化，所有状态和错误均本地化。
 - 精致的深色界面、桌面与手机布局、键盘操作、减弱动态效果偏好支持。
 - 权限被拒绝、设备缺失或占用、信号中断、音频暂停等状态的明确提示。
@@ -51,13 +52,21 @@ npm run preview   # 在本机预览生产构建
 4. 「停止摄像头」只关闭画面；麦克风开关只关闭监听；「停止全部采集」释放全部设备。
 5. 离开页面或刷新也会停止采集。即使浏览器记住了权限，下次打开仍需要主动开启。
 
+### 采集质量与音量
+
+启动后会读取媒体轨道的 `getCapabilities()`，使用 `applyConstraints()` 优先协商最高规格。摄像头优先原生画面，不使用裁切或缩放来凑分辨率；协商完分辨率后，在保持该分辨率的前提下提高帧率。麦克风优先浏览器报告的最高采样率、位深与声道数。能力查询不可用时使用较高的初始偏好；如果驱动拒绝升级，保留已经取得的可用媒体流。
+
+设备能力的范围不代表所有参数组合都可用，因此以页面显示的 `getSettings()` 实际值为准，未报告的字段不会虚构。音频输出设备和浏览器可能重新采样或混合声道；远程软件也可能压缩画面和声音。最高采集规格不等于远程端无损接收。
+
+回放 **100% 为原始信号增益，200% 为 2 倍振幅增益**，不代表人耳感受到的响度翻倍。超过 100% 时界面会提示失真和反馈风险；强信号可能削波，请根据听感降低音量。采集规格与回放音量相互独立，默认 35% 回放音量不降低采集质量。
+
 ### 远程桌面声音转发
 
 Ambient Portal 本身不进行网络推流。在 UU 远程等软件中开启**被控端系统声音转发 / 电脑声音**，控制端才能听到本页回放的麦克风声音。具体功能名、可用性和声音输出设备取决于远程软件与操作系统。
 
 - 本页的「麦克风监听」与远程软件的「系统声音转发」需要同时开启；仅开启远程语音聊天或控制端麦克风，不等同于转发被控端系统声音。
 - 声音会在被控端播放。建议为**被控设备**接入耳机，或配置远程软件能够采集的虚拟音频输出，避免麦克风收进扬声器声音形成回声或啸叫。仅给控制端戴耳机不能消除被控端反馈。
-- 默认开启浏览器的回声消除和降噪，关闭自动增益；效果依设备而异，不能保证完全消除反馈，也可能减弱部分环境声。
+- 默认请求关闭回声消除、降噪和自动增益，尽量保留环境声；实际处理能力依设备和浏览器而异。请避免让播放声音再次进入麦克风，尤其是在放大回放时。
 - 将被控设备或浏览器静音，可能也让远程转发无声。检查浏览器、系统音量和远程软件的声音设置；先以低音量确认链路。
 - 保持被控设备唤醒、浏览器和网页打开。系统休眠、浏览器后台限制或设备切换可能暂停采集；本页会反映设备或音频中断状态。移动设备后台运行能力由浏览器决定。
 
@@ -146,7 +155,7 @@ PLAYWRIGHT_CHROMIUM=1 npm run test:e2e
 
 Windows PowerShell 对应设置：`$env:PLAYWRIGHT_CHROMIUM="1"`，然后运行 `npm run test:e2e`。
 
-测试会启动生产预览，检查 `/ambient-portal/` 的资源与刷新、摄像头 / 麦克风独立控制、轨道释放、权限错误与重试、语言持久化、键盘对话框，以及 1440 / 390 / 320 像素宽度下的双语布局。截图保存在 `test-results/`。
+测试会启动生产预览，检查 `/ambient-portal/` 的资源与刷新、最高采集规格与实际参数显示、200% 回放增益、摄像头 / 麦克风独立控制、轨道释放、权限错误与重试、语言持久化、键盘对话框，以及 1440 / 390 / 320 像素宽度下的双语布局。截图保存在 `test-results/`。
 
 ## 代码结构
 
@@ -165,3 +174,5 @@ tests/             生命周期与浏览器测试
 无媒体持久化、网络 API、第三方字体或分析脚本。画面直接绑定到静音 `<video>`；麦克风走 `MediaStream → AnalyserNode → GainNode → AudioContext.destination`，无需编码、录制或网络往返。网页的正常静态资源请求仍由部署平台提供。
 
 部署与浏览器行为参考：[Vite 静态部署](https://vite.dev/guide/static-deploy.html#github-pages)、[GitHub Pages 自定义工作流](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)、[MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)、[MDN AudioContext](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext)。
+
+采集与增益参考：[MDN getCapabilities](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getCapabilities)、[MDN applyConstraints](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/applyConstraints)、[MDN getSettings](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/getSettings)、[MDN GainNode.gain](https://developer.mozilla.org/en-US/docs/Web/API/GainNode/gain)。

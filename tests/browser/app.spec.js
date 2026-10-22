@@ -3,6 +3,13 @@ import { test, expect } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.__testTracks = [];
+    window.__testGains = [];
+    const createGain = AudioContext.prototype.createGain;
+    AudioContext.prototype.createGain = function () {
+      const node = createGain.call(this);
+      window.__testGains.push(node);
+      return node;
+    };
     if (!navigator.mediaDevices) return;
     const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
     navigator.mediaDevices.getUserMedia = async (constraints) => {
@@ -43,6 +50,14 @@ test('camera and microphone operate independently and stop releases every track'
   await page.locator('#volume').focus();
   await page.locator('#volume').press('ArrowRight');
   await expect(page.locator('#volume-value')).toHaveText('36%');
+  await page.locator('#volume').press('End');
+  await expect(page.locator('#volume-value')).toHaveText('200%');
+  await expect.poll(() => page.evaluate(() => window.__testGains[0].gain.value)).toBeCloseTo(2, 2);
+  expect(await page.locator('#volume').evaluate((slider) => slider.style.getPropertyValue('--volume'))).toBe('100%');
+  await expect(page.locator('#volume-boost-hint')).toBeVisible();
+  await page.locator('#volume').press('Home');
+  await expect(page.locator('#volume-value')).toHaveText('0%');
+  await expect(page.locator('#volume-boost-hint')).toBeHidden();
   await page.getByRole('button', { name: 'Stop camera' }).click();
   await expect(page.locator('#microphone-status')).toHaveText('On');
   await expect(page.locator('#preview-status-text')).toHaveText('Standby');
@@ -50,6 +65,62 @@ test('camera and microphone operate independently and stop releases every track'
   await expect(page.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
   expect(await page.evaluate(() => window.__testTracks.every((track) => track.readyState === 'ended'))).toBe(true);
   expect(await page.locator('video').evaluate((video) => video.srcObject)).toBeNull();
+});
+
+test('capture prefers the highest device specifications and displays the actual negotiated settings', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Start camera' }).click();
+  await expect(page.locator('#preview-status-text')).toHaveText('Live');
+  await page.getByRole('switch').click();
+  await expect(page.locator('#mic-status')).toHaveText('On');
+  const tracks = await page.evaluate(() => window.__testTracks.map((track) => ({
+    kind: track.kind, capabilities: track.getCapabilities(), constraints: track.getConstraints(), settings: track.getSettings(),
+  })));
+  const camera = tracks.find((track) => track.kind === 'video');
+  const microphone = tracks.find((track) => track.kind === 'audio');
+  expect(camera.settings.width).toBe(camera.capabilities.width.max);
+  expect(camera.settings.height).toBe(camera.capabilities.height.max);
+  expect(camera.settings.frameRate).toBe(camera.capabilities.frameRate.max);
+  expect(camera.settings.resizeMode).toBe('none');
+  await expect(page.locator('#preview-detail')).toContainText(`${camera.settings.width} × ${camera.settings.height}`);
+  await expect(page.locator('#preview-detail')).toContainText(`${Math.round(camera.settings.frameRate * 10) / 10} fps`);
+  for (const property of ['sampleRate', 'sampleSize', 'channelCount']) {
+    if (!microphone.capabilities[property]) continue;
+    const preference = microphone.constraints[property];
+    expect(preference.ideal ?? preference).toBe(microphone.capabilities[property].max);
+    // Chromium's unprocessed synthetic input can stay at 44.1 kHz even when its range includes 48 kHz.
+    // Capabilities are not a list of jointly supported modes; the UI must report the actual result.
+    expect(microphone.settings[property]).toBeGreaterThanOrEqual(microphone.capabilities[property].min);
+    expect(microphone.settings[property]).toBeLessThanOrEqual(microphone.capabilities[property].max);
+  }
+  for (const property of ['echoCancellation', 'noiseSuppression', 'autoGainControl']) {
+    expect(microphone.settings[property]).toBe(false);
+  }
+  await expect(page.locator('#audio-detail')).toContainText(`${microphone.settings.sampleRate / 1000} kHz`);
+  await expect(page.locator('#audio-detail')).toContainText(`${microphone.settings.channelCount} ch`);
+  await page.getByRole('button', { name: 'Stop everything' }).click();
+});
+
+test('active audio specifications and amplified volume fit both languages on desktop and mobile', async ({ page }, testInfo) => {
+  await page.goto('./');
+  await page.getByRole('switch').click();
+  await expect(page.locator('#mic-status')).toHaveText('On');
+  await page.locator('#volume').focus();
+  await page.locator('#volume').press('End');
+  for (const [name, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844], ['narrow', 320, 760]]) {
+    await page.setViewportSize({ width, height });
+    for (const language of ['en-US', 'zh-CN']) {
+      if (await page.locator('html').getAttribute('lang') !== language) await page.locator('#language').click();
+      await expect(page.locator('#volume-value')).toHaveText('200%');
+      await expect(page.locator('#volume-boost-hint')).toContainText(language === 'en-US' ? 'Above 100%' : '超过 100%');
+      await expect(page.locator('#audio-detail')).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`boost-${name}-${language}.png`), fullPage: true });
+    }
+  }
+  await page.locator('#stop-all').click();
+  await expect(page.locator('#audio-detail')).toBeHidden();
+  await expect(page.locator('#volume-boost-hint')).toBeHidden();
 });
 
 test('microphone can start before the camera and pagehide releases it', async ({ page }) => {
