@@ -10,11 +10,12 @@ English · [简体中文](README.md)
 
 Ambient Portal is a lightweight, browser-only window into the environment around a device. Open it on a computer you control remotely to preview its camera and play its microphone through the local browser. A remote desktop app such as UU Remote forwards the screen and system audio to your other device.
 
-Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accounts, database, or production runtime dependencies. No media recording, storage, or uploading. Only the language preference persists in this browser’s `localStorage`.
+Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accounts, database, or production runtime dependencies. No media recording, storage, or uploading. Only language and aspect ratio preferences persist in this browser’s `localStorage`.
 
 ## Features
 
 - Direct camera preview and fullscreen viewing. Prefers the highest available native resolution, then the highest frame rate at that resolution, with actual capture settings displayed.
+- Auto, 16:9, 4:3, 1:1, and 9:16 aspect ratio negotiation. Native formats come first; unavailable formats keep the working picture, with an explicit option to allow cropping.
 - Independent camera and microphone controls, plus one action to stop all capture. Navigation and refresh release media tracks.
 - Microphone capture prefers the highest available sample rate, bit depth, and channel count, showing the actual specifications reported by the browser. Echo cancellation, noise suppression, and automatic gain are requested off to preserve ambient sound.
 - Low latency Web Audio monitoring, a real input level meter, and 0–200% playback volume. Monitoring starts off, with an initial playback volume of 35% when enabled.
@@ -54,11 +55,23 @@ Production preview: `http://127.0.0.1:4173/ambient-portal/`. The preview server 
 
 ### Capture quality and volume
 
-After capture starts, the app reads the track’s `getCapabilities()` and uses `applyConstraints()` to prefer the highest available settings. The camera favors native frames without cropping or scaling to reach a requested resolution, then raises frame rate while preserving the negotiated dimensions. The microphone prefers the highest reported sample rate, bit depth, and channel count. When capability queries are unavailable, high initial preferences are used; if a driver rejects an upgrade, the existing usable stream is retained.
+After capture starts, the app reads the track’s `getCapabilities()` and uses `applyConstraints()` to prefer the highest available settings. The camera favors native frames by default, then raises frame rate while preserving the negotiated dimensions. The microphone prefers the highest reported sample rate, bit depth, and channel count. When capability queries are unavailable, high initial preferences are used; if a driver rejects an upgrade, the existing usable stream is retained.
 
 Capability ranges do not guarantee every combination is available. The interface therefore displays actual `getSettings()` values and omits unreported fields. The browser and audio output device may resample audio or mix channels, and remote desktop software may compress both video and audio. Maximum capture specifications do not guarantee lossless reception on the remote device.
 
 Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perceived loudness. Above 100%, the interface highlights distortion and feedback risks. Strong signals may clip, so lower volume if needed. Capture quality and playback volume are independent: the default 35% playback level does not reduce capture quality.
+
+### Aspect ratios
+
+Choose **Auto · best quality, 16:9, 4:3, 1:1, or 9:16** in the camera controls. While the camera is off, this only saves a preference. During capture, changes use the same track and leave microphone playback running. Rapid selections process the current negotiation and only the latest pending choice. Capture can be stopped during a switch.
+
+- Requests use `resizeMode: none` by default, preferring high resolution within the selected ratio before raising frame rate. A tolerance of about 1% accommodates near-ratio native modes such as 1760 × 1328 for 4:3.
+- Actual dimensions and mode are verified with `getSettings()`. Ignored requests, unreported native modes, or unsupported formats do not appear as successful switches. The prior picture and selection are restored; if restoration fails, a visible message explains the reset to Auto.
+- Only clicking **Allow crop to fit** requests `crop-and-scale`. This may crop or scale the picture and cannot add sensor detail. The button is absent when the browser cannot control cropping. Permission to crop is not saved: the next session tries native formats first.
+- The preview footer shows actual resolution, frame rate, ratio, and mode. **Device native mode** means a format offered by the device, driver, or OS, not necessarily the full sensor area or all 12 megapixels. **Browser adapted** means the browser reports its adaptation mode, not proof that every frame was cropped. Unreported modes are identified honestly.
+- The preview uses `object-fit: contain` to show the complete output without stretching or CSS cropping. Reload remembers the ratio preference but leaves both devices off. Each session negotiates anew; device capabilities are not cached and no model-specific resolution table is hardcoded.
+
+Capability ranges cannot enumerate all native format combinations, so quality preference is best effort, not a guarantee of the hardware’s theoretical maximum. Cameras, systems, browsers, and system camera effects can produce different results; use the actual parameters in the preview footer.
 
 ### Remote desktop audio
 
@@ -155,7 +168,7 @@ PLAYWRIGHT_CHROMIUM=1 npm run test:e2e
 
 For Windows PowerShell, set `$env:PLAYWRIGHT_CHROMIUM="1"`, then run `npm run test:e2e`.
 
-The suite starts a production preview and checks Pages asset paths and refresh, maximum capture specifications and actual settings, 200% playback gain, independent capture controls, track cleanup, denied permissions and retry, language persistence, keyboard dialog behavior, and layouts in both languages at widths of 1440, 390, and 320 pixels. Screenshots are saved in `test-results/`.
+The suite starts a production preview and checks Pages asset paths and refresh, maximum capture specifications and actual settings, aspect ratio switching and explicit crop permission, rapid requests and cancellation, 200% playback gain, independent capture controls, track cleanup, denied permissions and retry, preference persistence, keyboard select and dialog behavior, and layouts in both languages at widths of 1440, 390, and 320 pixels. Unit tests also cover ignored constraints, failed restoration, and missing capability APIs. Screenshots are saved in `test-results/`.
 
 ## Project structure
 
@@ -163,6 +176,7 @@ The suite starts a production preview and checks Pages asset paths and refresh, 
 src/
   main.js          Interface, state rendering, and interaction
   media.js         Capture, playback, and resource lifecycle
+  camera-format.js Ratio negotiation, serialized switching, verification, and recovery
   i18n.js          Local dictionaries, language detection, and preference storage
   icons.js         Local SVG line icons
   style.css        Responsive dark interface

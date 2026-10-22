@@ -1,3 +1,5 @@
+import { CameraFormatSession, CAMERA_FORMATS } from './camera-format.js';
+
 const idleDevice = () => ({ status: 'idle', error: null, muted: false });
 const stopTracks = (stream) => stream?.getTracks().forEach((track) => track.stop());
 export const isEngaged = (device) => ['requesting', 'active', 'paused'].includes(device.status);
@@ -6,35 +8,16 @@ export const MAX_VOLUME = 2;
 const rawAudio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
 const positive = (value) => Number.isFinite(value) && value > 0;
 
-async function preferHighestQuality(track, kind, isCurrent) {
+async function preferHighestAudioQuality(track) {
   if (!track.getCapabilities || !track.applyConstraints) return;
   try {
     const capabilities = track.getCapabilities();
-    const constraints = kind === 'audio' ? { ...rawAudio, latency: { ideal: 0 } } : {};
-    const properties = kind === 'video' ? ['width', 'height'] : ['sampleRate', 'sampleSize', 'channelCount'];
-    for (const property of properties) {
+    const constraints = { ...rawAudio, latency: { ideal: 0 } };
+    for (const property of ['sampleRate', 'sampleSize', 'channelCount']) {
       const maximum = capabilities[property]?.max;
       if (positive(maximum)) constraints[property] = { ideal: maximum };
     }
-    if (kind === 'video' && capabilities.resizeMode?.includes('none')) {
-      constraints.resizeMode = { exact: 'none' };
-    }
-    if (!Object.keys(constraints).length) return;
     await track.applyConstraints(constraints);
-    if (!isCurrent()) return;
-
-    // Resolution comes first. Only raise frame rate within the negotiated native dimensions.
-    if (kind === 'video' && positive(capabilities.frameRate?.max)) {
-      const settings = track.getSettings();
-      if (positive(settings.width) && positive(settings.height)) {
-        await track.applyConstraints({
-          ...constraints,
-          width: { exact: settings.width },
-          height: { exact: settings.height },
-          frameRate: { ideal: capabilities.frameRate.max },
-        });
-      }
-    }
   } catch {
     // Capabilities describe ranges, not every valid combination. Keep the working stream
     // if a driver rejects an upgrade; ended tracks and cancelled requests are checked by the caller.
@@ -64,6 +47,7 @@ export class MediaController {
     permissions = globalThis.navigator?.permissions,
     AudioContext = globalThis.AudioContext || globalThis.webkitAudioContext,
     secure = globalThis.isSecureContext,
+    cameraFormat = 'auto',
     onChange = () => {},
   }) {
     this.video = video;
@@ -77,12 +61,28 @@ export class MediaController {
     this.permissions = { camera: 'unknown', microphone: 'unknown' };
     this.volume = 0.35;
     this.cameraRequest = 0;
+    this.cameraFormat = CAMERA_FORMATS.some(({ id }) => id === cameraFormat) ? cameraFormat : 'auto';
+    this.cameraFormats = null;
     this.microphoneRequest = 0;
     this.permissionListeners = [];
     this.disposed = false;
   }
 
   get engaged() { return isEngaged(this.camera) || isEngaged(this.microphone); }
+
+  get cameraFormatState() {
+    return this.cameraFormats?.state || { selected: this.cameraFormat, busy: false, notice: null, fallback: null };
+  }
+
+  setCameraFormat(format) {
+    if (this.disposed || !CAMERA_FORMATS.some(({ id }) => id === format)) return Promise.resolve();
+    this.cameraFormat = format;
+    if (this.cameraFormats) return this.cameraFormats.select(format);
+    this.emit();
+    return Promise.resolve();
+  }
+
+  allowCameraCrop() { return this.cameraFormats?.allowCrop() || Promise.resolve(); }
 
   emit() { if (!this.disposed) this.onChange(); }
 
@@ -142,7 +142,7 @@ export class MediaController {
       stream = await this.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 3840 }, height: { ideal: 2160 },
-          frameRate: { ideal: 60 }, resizeMode: { ideal: 'none' },
+          resizeMode: { ideal: 'none' },
         },
         audio: false,
       });
@@ -153,7 +153,17 @@ export class MediaController {
       if (!track || track.readyState === 'ended') return this.fail('camera', 'errorDisconnected');
       this.observeTrack('camera', track, request);
       this.permissions.camera = 'granted';
-      await preferHighestQuality(track, 'video', () => request === this.cameraRequest);
+      let supported;
+      try { supported = this.mediaDevices.getSupportedConstraints?.(); } catch { /* Optional API. */ }
+      this.cameraFormats = new CameraFormatSession(track, {
+        supported,
+        isCurrent: () => request === this.cameraRequest,
+        onChange: () => {
+          if (!this.cameraFormats.state.busy) this.cameraFormat = this.cameraFormats.state.selected;
+          this.emit();
+        },
+      });
+      await this.cameraFormats.select(this.cameraFormat);
       if (request !== this.cameraRequest) return stopTracks(stream);
       if (track.readyState === 'ended') return this.fail('camera', 'errorDisconnected');
       this.video.muted = true;
@@ -171,6 +181,7 @@ export class MediaController {
 
   stopCamera(notify = true) {
     ++this.cameraRequest;
+    this.cameraFormats = null;
     stopTracks(this.cameraStream);
     this.cameraStream = null;
     this.video.pause();
@@ -211,7 +222,7 @@ export class MediaController {
       if (!track || track.readyState === 'ended') return this.fail('microphone', 'errorDisconnected');
       this.observeTrack('microphone', track, request);
       this.permissions.microphone = 'granted';
-      await preferHighestQuality(track, 'audio', () => request === this.microphoneRequest);
+      await preferHighestAudioQuality(track);
       if (request !== this.microphoneRequest) return stopTracks(stream);
       if (track.readyState === 'ended') return this.fail('microphone', 'errorDisconnected');
       this.source = context.createMediaStreamSource(stream);

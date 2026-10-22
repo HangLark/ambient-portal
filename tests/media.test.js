@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MediaController } from '../src/media.js';
+import { cameraStream } from './helpers/camera.js';
 
 class Track extends EventTarget {
   readyState = 'live';
@@ -434,5 +435,73 @@ test('playback gain reaches 200%, is bounded, and survives an in-session microph
   assert.equal(controller.gain.gain.value, 2);
   controller.setVolume(-1);
   assert.equal(controller.gain.gain.value, 0);
+  controller.dispose();
+});
+
+test('ratio selection while permission is pending uses the latest preference without another device request', async () => {
+  const permission = deferred();
+  const input = cameraStream();
+  let captures = 0;
+  const { controller } = setup({ cameraFormat: '16:9', mediaDevices: { getUserMedia: () => {
+    captures++;
+    return permission.promise;
+  } } });
+  const starting = controller.startCamera();
+  await controller.setCameraFormat('4:3');
+  permission.resolve(input);
+  await starting;
+  assert.equal(captures, 1);
+  assert.equal(controller.cameraFormatState.selected, '4:3');
+  assert.equal(input.track.getSettings().width, 1760);
+  controller.dispose();
+});
+
+test('switching active formats preserves track observers and microphone playback', async () => {
+  const input = cameraStream(), mic = stream('audio');
+  let captures = 0;
+  const { controller, video } = setup({ mediaDevices: { getUserMedia: async (constraints) => {
+    captures++;
+    return constraints.audio ? mic : input;
+  } } });
+  await controller.startMicrophone();
+  const context = controller.audioContext;
+  await controller.startCamera();
+  await controller.setCameraFormat('16:9');
+  await controller.setCameraFormat('4:3');
+  assert.equal(captures, 2);
+  assert.equal(video.srcObject, input);
+  assert.equal(controller.audioContext, context);
+  assert.equal(controller.microphone.status, 'active');
+  input.track.muted = true;
+  input.track.dispatchEvent(new Event('mute'));
+  assert.equal(controller.camera.muted, true);
+  input.track.stop();
+  input.track.dispatchEvent(new Event('ended'));
+  assert.equal(controller.camera.error, 'errorDisconnected');
+  assert.equal(controller.microphone.status, 'active');
+  controller.dispose();
+});
+
+test('stopping an active format switch invalidates its queue without affecting a restarted session', async () => {
+  const old = cameraStream(), current = cameraStream();
+  let captures = 0;
+  const { controller, video } = setup({ mediaDevices: { getUserMedia: async () => ++captures === 1 ? old : current } });
+  await controller.startCamera();
+  const entered = deferred(), release = deferred();
+  let changes = 0;
+  old.track.applyConstraints = async () => { changes++; entered.resolve(); await release.promise; };
+  const switching = controller.setCameraFormat('16:9');
+  await entered.promise;
+  const pending = controller.setCameraFormat('4:3');
+  controller.stopCamera();
+  assert.equal(old.track.readyState, 'ended');
+  await controller.startCamera();
+  assert.equal(controller.cameraFormatState.selected, '4:3');
+  release.resolve();
+  await Promise.all([switching, pending]);
+  assert.equal(changes, 1);
+  assert.equal(video.srcObject, current);
+  assert.equal(controller.camera.status, 'active');
+  assert.equal(controller.cameraFormatState.selected, '4:3');
   controller.dispose();
 });

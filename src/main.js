@@ -2,6 +2,7 @@ import './style.css';
 import { icon } from './icons.js';
 import { detectLanguage, saveLanguage, translate } from './i18n.js';
 import { MediaController, isEngaged, MAX_VOLUME } from './media.js';
+import { CAMERA_FORMATS, cameraRatioLabel, cameraModeLabel, loadCameraFormat, saveCameraFormat } from './camera-format.js';
 
 let storage;
 try { storage = window.localStorage; } catch { /* The app also works without storage. */ }
@@ -50,6 +51,13 @@ document.querySelector('#app').innerHTML = `
         <div class="control-heading"><p class="eyebrow">${label('session')}</p><h2 id="controls-title"></h2><p>${label('sessionBody')}</p></div>
         <div class="device-control camera-control">
           <div class="device-row"><div class="device-icon">${icon('camera')}</div><div class="device-label"><h3>${label('camera')}</h3><p>${label('videoInput')}</p></div><span class="device-pill" id="camera-pill"></span></div>
+          <div class="format-control">
+            <label for="camera-format">${label('formatLabel')}</label>
+            <div class="format-select"><select id="camera-format" aria-describedby="format-help format-notice">${CAMERA_FORMATS.map(({ id, label: key }) => `<option value="${id}" data-i18n="${key}">${t(key)}</option>`).join('')}</select>${icon('chevron')}</div>
+            <p id="format-help">${label('formatHelp')}</p>
+            <p class="format-notice" id="format-notice" role="status" hidden></p>
+            <button class="crop-button" id="allow-crop" type="button" hidden></button>
+          </div>
           <button class="camera-button" id="camera-button" type="button"><span id="camera-action"></span><span id="camera-action-icon"></span></button>
         </div>
         <div class="device-control microphone-control">
@@ -88,7 +96,8 @@ document.querySelector('#app').innerHTML = `
 
 const $ = (id) => document.getElementById(id);
 const video = $('preview-video');
-const media = new MediaController({ video, onChange: render });
+let savedCameraFormat = loadCameraFormat(storage);
+const media = new MediaController({ video, cameraFormat: savedCameraFormat, onChange: render });
 let levelFrame = 0;
 let lastMeterTime = 0;
 let fullscreenError = false;
@@ -106,15 +115,16 @@ function permissionLabel(state) {
 function render() {
   const camera = media.camera;
   const mic = media.microphone;
+  const format = media.cameraFormatState;
   const cameraActive = camera.status === 'active';
   const cameraBusy = camera.status === 'requesting';
   const micEngaged = isEngaged(mic);
   const cameraState = camera.muted && cameraActive ? 'paused' : camera.status;
   $('stage').dataset.state = cameraState;
-  $('preview-status').dataset.state = cameraState;
-  $('preview-status-text').textContent = t({ idle: 'standby', requesting: 'connecting', active: 'live', paused: 'interrupted', error: 'needsAttention' }[cameraState]);
+  $('preview-status').dataset.state = format.busy ? 'requesting' : cameraState;
+  $('preview-status-text').textContent = t(format.busy ? 'formatSwitching' : { idle: 'standby', requesting: 'connecting', active: 'live', paused: 'interrupted', error: 'needsAttention' }[cameraState]);
   $('empty-state').hidden = cameraActive && !camera.muted;
-  const emptyKeys = cameraBusy ? ['pendingTitle', 'pendingBody', 'pendingHint']
+  const emptyKeys = cameraBusy ? ['pendingTitle', format.busy ? 'formatPendingBody' : 'pendingBody', 'pendingHint']
     : camera.error ? ['errorTitle', camera.error, 'emptyHint']
     : camera.muted ? ['pausedTitle', 'pausedBody', 'emptyHint']
     : ['emptyTitle', 'emptyBody', 'emptyHint'];
@@ -126,9 +136,22 @@ function render() {
   const settings = media.cameraStream?.getVideoTracks()[0]?.getSettings();
   const frameRate = settings?.frameRate ? `${Math.round(settings.frameRate * 10) / 10} ${t('fps')}` : '';
   $('preview-detail').textContent = cameraActive && settings?.width && settings?.height
-    ? [`${settings.width} × ${settings.height}`, frameRate, t('directPreview')].filter(Boolean).join(' · ') : t('directPreview');
+    ? [`${settings.width} × ${settings.height}`, frameRate, cameraRatioLabel(settings), t(cameraModeLabel(settings))].filter(Boolean).join(' · ') : t('directPreview');
+  $('preview-detail').title = cameraActive ? t('formatModeHelp') : '';
+  $('camera-format').value = format.selected;
+  $('camera-format').disabled = Boolean(media.unavailable);
+  $('camera-format').setAttribute('aria-busy', String(format.busy));
+  $('format-help').textContent = t(format.busy ? 'formatSwitching' : 'formatHelp');
+  $('format-notice').hidden = !format.notice;
+  $('format-notice').textContent = format.notice ? [format.fallback, t(format.notice)].filter(Boolean).join(' · ') : '';
+  $('allow-crop').hidden = !format.fallback;
+  $('allow-crop').textContent = `${t('formatAllowCrop')}${format.fallback ? ` · ${format.fallback}` : ''}`;
+  if (!format.busy && media.cameraFormat !== savedCameraFormat) {
+    savedCameraFormat = media.cameraFormat;
+    saveCameraFormat(storage, savedCameraFormat);
+  }
   $('controls-title').textContent = t(media.engaged ? 'sessionActive' : 'sessionIdle');
-  $('camera-pill').textContent = t(stateLabel(camera));
+  $('camera-pill').textContent = t(format.busy ? 'formatSwitching' : stateLabel(camera));
   $('camera-pill').dataset.state = cameraState;
   $('camera-action').textContent = t(cameraBusy ? 'cancel' : cameraActive ? 'stopCamera' : camera.error ? 'retryCamera' : 'startCamera');
   $('camera-action-icon').innerHTML = icon(cameraBusy ? 'x' : cameraActive ? 'stop' : 'arrow');
@@ -219,6 +242,12 @@ $('language').addEventListener('click', () => {
   applyLanguage();
 });
 $('camera-button').addEventListener('click', () => isEngaged(media.camera) ? media.stopCamera() : media.startCamera());
+$('camera-format').addEventListener('change', (event) => { void media.setCameraFormat(event.target.value); });
+$('allow-crop').addEventListener('click', () => {
+  // The fallback button disappears as soon as negotiation starts; keep keyboard focus nearby.
+  $('camera-format').focus({ preventScroll: true });
+  void media.allowCameraCrop();
+});
 $('microphone-switch').addEventListener('click', () => isEngaged(media.microphone) ? media.stopMicrophone() : media.startMicrophone());
 $('stop-all').addEventListener('click', () => media.stopAll());
 $('resume-audio').addEventListener('click', () => media.resumeAudio());
