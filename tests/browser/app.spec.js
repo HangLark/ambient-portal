@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('production assets load under the Pages subpath, with no external requests', async ({ page }) => {
+test('production assets load under the Pages subpath, with no external requests', async ({ page, baseURL }) => {
   const errors = [], requests = [], failures = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('request', (request) => requests.push(request.url()));
@@ -23,7 +23,8 @@ test('production assets load under the Pages subpath, with no external requests'
   await expect(page.getByRole('button', { name: 'Stop everything' })).toBeDisabled();
   await expect(page.locator('#empty-state')).toBeVisible();
   expect(await page.locator('video').evaluate((video) => video.srcObject)).toBeNull();
-  expect(requests.every((url) => url.startsWith('http://127.0.0.1:4173/ambient-portal/'))).toBe(true);
+  expect(await page.evaluate(() => window.isSecureContext)).toBe(true);
+  expect(requests.every((url) => url.startsWith(baseURL))).toBe(true);
   expect(errors).toEqual([]);
   expect(failures).toEqual([]);
   await page.reload();
@@ -120,10 +121,10 @@ test('language persists after reload without reactivating capture', async ({ pag
   expect(await page.evaluate(() => window.__testTracks.length)).toBe(0);
 });
 
-test('Chinese browser language is selected automatically', async ({ browser }) => {
+test('Chinese browser language is selected automatically', async ({ browser, baseURL }) => {
   const context = await browser.newContext({ locale: 'zh-CN' });
   const page = await context.newPage();
-  await page.goto('http://127.0.0.1:4173/ambient-portal/');
+  await page.goto(baseURL);
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
   await expect(page.getByRole('button', { name: '开启摄像头' })).toBeVisible();
   await context.close();

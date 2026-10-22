@@ -4,6 +4,8 @@
 
 English · [简体中文](README.md)
 
+[Open the app](https://hanglark.github.io/ambient-portal/) · [GitHub repository](https://github.com/HangLark/ambient-portal)
+
 ![Ambient Portal desktop interface](docs/preview.en-US.png)
 
 Ambient Portal is a lightweight, browser-only window into the environment around a device. Open it on a computer you control remotely to preview its camera and play its microphone through the local browser. A remote desktop app such as UU Remote forwards the screen and system audio to your other device.
@@ -25,7 +27,7 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 Use **Node.js 24 LTS** (minimum 22.12) and npm. An `.nvmrc` is included.
 
 ```bash
-git clone https://github.com/<username>/ambient-portal.git
+git clone https://github.com/HangLark/ambient-portal.git
 cd ambient-portal
 npm ci
 npm run dev
@@ -126,6 +128,14 @@ The Playwright suite uses installed Google Chrome by default with **synthetic ca
 ```bash
 npm run test:e2e
 ```
+
+Run the same checks against the deployed HTTPS site without starting a local server:
+
+```bash
+AMBIENT_TEST_URL=https://hanglark.github.io/ambient-portal/ npm run test:e2e
+```
+
+For Windows PowerShell, set `$env:AMBIENT_TEST_URL="https://hanglark.github.io/ambient-portal/"`, then run `npm run test:e2e`.
 
 If Chrome is unavailable, use Playwright Chromium:
 

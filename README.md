@@ -4,6 +4,8 @@
 
 [English](README.en.md) · 简体中文
 
+[在线使用](https://hanglark.github.io/ambient-portal/) · [GitHub 仓库](https://github.com/HangLark/ambient-portal)
+
 ![Ambient Portal 中文桌面界面](docs/preview.zh-CN.png)
 
 Ambient Portal 是一个轻量的纯前端环境感知工具。在被控设备上打开网页，就能通过摄像头观察周围，通过麦克风监听环境声音。配合 UU 远程等远程桌面软件的屏幕与系统声音转发，在另一台设备上也能感知现场。
@@ -25,7 +27,7 @@ Vite + 原生 JavaScript + 浏览器 Web API。无后端、账号、数据库或
 推荐 **Node.js 24 LTS**（最低 22.12）和 npm。项目包含 `.nvmrc`。
 
 ```bash
-git clone https://github.com/<username>/ambient-portal.git
+git clone https://github.com/HangLark/ambient-portal.git
 cd ambient-portal
 npm ci
 npm run dev
@@ -126,6 +128,14 @@ git push -u origin main
 ```bash
 npm run test:e2e
 ```
+
+对已经部署的 HTTPS 网站运行相同的测试（不会启动本地服务器）：
+
+```bash
+AMBIENT_TEST_URL=https://hanglark.github.io/ambient-portal/ npm run test:e2e
+```
+
+Windows PowerShell：先设置 `$env:AMBIENT_TEST_URL="https://hanglark.github.io/ambient-portal/"`，再运行 `npm run test:e2e`。
 
 没有 Chrome 时可使用 Playwright Chromium：
 
