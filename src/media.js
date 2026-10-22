@@ -3,6 +3,7 @@ import { CameraFormatSession, CAMERA_FORMATS } from './camera-format.js';
 const idleDevice = () => ({ status: 'idle', error: null, muted: false });
 const stopTracks = (stream) => stream?.getTracks().forEach((track) => track.stop());
 export const isEngaged = (device) => ['requesting', 'active', 'paused'].includes(device.status);
+export const DEFAULT_VOLUME = 0.35;
 export const MAX_VOLUME = 2;
 
 const rawAudio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
@@ -59,7 +60,7 @@ export class MediaController {
     this.camera = idleDevice();
     this.microphone = idleDevice();
     this.permissions = { camera: 'unknown', microphone: 'unknown' };
-    this.volume = 0.35;
+    this.volume = DEFAULT_VOLUME;
     this.cameraRequest = 0;
     this.cameraFormat = CAMERA_FORMATS.some(({ id }) => id === cameraFormat) ? cameraFormat : 'auto';
     this.cameraFormats = null;

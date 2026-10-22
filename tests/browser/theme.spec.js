@@ -101,7 +101,7 @@ test('theme changes preserve active media, gain and camera format; fullscreen us
   await page.locator('#camera-button').click();
   await expect(page.locator('#preview-status-text')).toHaveText('Live');
   await page.getByRole('switch').click();
-  await expect(page.locator('#playback-status')).toHaveText('Browser playback running');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
   await page.locator('#volume').focus();
   await page.keyboard.press('End');
   await page.locator('#settings-open').click();

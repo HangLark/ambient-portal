@@ -1,7 +1,7 @@
 import './style.css';
 import { icon } from './icons.js';
 import { detectLanguage, saveLanguage, translate } from './i18n.js';
-import { MediaController, isEngaged, MAX_VOLUME } from './media.js';
+import { MediaController, isEngaged, DEFAULT_VOLUME, MAX_VOLUME } from './media.js';
 import { CAMERA_FORMATS, cameraRatioLabel, cameraModeLabel, loadCameraFormat, saveCameraFormat } from './camera-format.js';
 
 let storage;
@@ -13,12 +13,12 @@ const themeOptions = [['system', 'themeSystem', 'monitor'], ['light', 'themeLigh
 const t = (key) => translate(language, key);
 const label = (key) => `<span data-i18n="${key}">${t(key)}</span>`;
 const bars = (count) => '<i></i>'.repeat(count);
-const closeButton = () => `<form method="dialog"><button class="primary-button" type="submit">${label('closeGuide')}${icon('check')}</button></form>`;
+const closeButton = () => `<form method="dialog"><button class="text-button dialog-close" type="submit">${label('closeDialog')}</button></form>`;
 
 document.querySelector('#app').innerHTML = `
   <a class="skip-link" href="#controls">${label('skip')}</a>
   <header class="site-header"><div class="header-inner">
-    <a class="brand" href="./" aria-label="Ambient Portal">${icon('portal', 'brand-symbol')}<span>Ambient<span class="brand-light"> Portal</span></span></a>
+    <a class="brand" href="#heading" aria-label="Ambient Portal">${icon('portal', 'brand-symbol')}<span>Ambient<span class="brand-light"> Portal</span></span></a>
     <div class="header-actions">
       <details class="theme-control" id="theme-control">
         <summary class="theme-button" id="theme-button"></summary>
@@ -30,7 +30,7 @@ document.querySelector('#app').innerHTML = `
     </div>
   </div></header>
   <main class="main-content">
-    <section class="intro" aria-labelledby="heading"><p class="eyebrow">${label('eyebrow')}</p><h1 id="heading">${label('heading')}</h1><p class="intro-description">${label('intro')}</p></section>
+    <section class="intro" aria-labelledby="heading"><h1 id="heading">${label('heading')}</h1><p class="intro-description">${label('intro')}</p></section>
     <div class="environment-error" id="environment-error" role="alert" hidden>${icon('alert')}<p></p></div>
     <section class="workspace" id="workspace" aria-labelledby="preview-title">
       <div class="panel-toolbar">
@@ -44,7 +44,7 @@ document.querySelector('#app').innerHTML = `
         <div class="empty-state" id="empty-state">
           <div class="portal-illustration" id="portal-illustration" aria-hidden="true"><div class="portal-orbit orbit-one"></div><div class="portal-orbit orbit-two"></div><div class="portal-glyph">${icon('portal')}</div></div>
           <h3 id="empty-title"></h3><p id="empty-body"></p>
-          <button class="primary-button" id="empty-start" type="button">${icon('camera')}${label('openCamera')}</button>
+          <button class="primary-button" id="empty-start" type="button">${icon('camera')}<span id="empty-action"></span></button>
           <p class="empty-hint" id="empty-hint"></p>
         </div>
         <div class="audio-scene" id="audio-scene" hidden>
@@ -60,7 +60,7 @@ document.querySelector('#app').innerHTML = `
         <div class="control-bar">
           <button class="camera-button primary-button" id="camera-button" type="button"><span id="camera-action-icon"></span><span id="camera-action"></span></button>
           <button class="monitor-button" id="microphone-switch" type="button" role="switch" aria-checked="false" aria-describedby="sound-advice">${icon('mic')}<span>${label('listen')}</span><span class="switch-track" aria-hidden="true"><i></i></span></button>
-          <div class="volume-group"><div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">35%</output></div><input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="35" step="1" aria-describedby="volume-boost-hint" /></div>
+          <div class="volume-group"><div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div><input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="volume-boost-hint" /></div>
           <button class="stop-button" id="stop-all" type="button" disabled>${icon('stop')}${label('stopAll')}</button>
         </div>
         <div class="audio-status-row">
@@ -80,17 +80,17 @@ document.querySelector('#app').innerHTML = `
         <div class="dialog-heading">${icon('settings')}<h2 id="settings-title">${label('settingsTitle')}</h2></div>
         <p>${label('qualityDefault')}</p>
         ${['camera', 'microphone'].map((name) => `<section class="settings-section"><h3>${icon(name === 'camera' ? 'camera' : 'mic')}${label(name)}</h3><p class="source-name" id="${name}-source-name"></p><p class="notice" id="${name}-source-status" role="status" hidden></p><div class="source-picker" id="${name}-picker" hidden><label for="${name}-device">${label('sourceLabel')}</label><select id="${name}-device"></select></div>${name === 'camera' ? `
-          <div class="format-control"><label for="camera-format">${label('formatLabel')}</label><select id="camera-format" aria-describedby="format-help format-notice">${CAMERA_FORMATS.map(({ id, label: key }) => `<option value="${id}" data-i18n="${key}">${t(key)}</option>`).join('')}</select><p id="format-help">${label('formatHelp')}</p><p class="notice" id="format-notice" role="status" hidden></p><button class="crop-button" id="allow-crop" type="button" hidden></button></div>` : '<p class="capture-detail" id="audio-detail" hidden></p>'}</section>`).join('')}
+          <div class="format-control"><label for="camera-format">${label('formatLabel')}</label><select id="camera-format" aria-describedby="format-help format-notice">${CAMERA_FORMATS.map(({ id, label: key }) => `<option value="${id}" data-i18n="${key}">${t(key)}</option>`).join('')}</select><p id="format-help">${label('formatHelp')}</p><p class="notice" id="format-notice" role="status" hidden></p><button class="crop-button" id="allow-crop" type="button" aria-describedby="crop-help" hidden></button><p id="crop-help" hidden>${label('formatCropHelp')}</p></div>` : '<p class="capture-detail" id="audio-detail" hidden></p>'}</section>`).join('')}
         <p class="notice" id="devices-error" role="status" hidden>${label('devicesError')}</p><p class="settings-note">${label('sourceHelp')}</p>
         ${closeButton()}
       </dialog>
       <dialog id="sound-dialog" aria-labelledby="sound-title">
         <div class="dialog-heading">${icon('headphones')}<h2 id="sound-title">${label('soundHelp')}</h2></div>
         <p>${label('soundIntro')}</p><ol class="sound-checks">
-          <li><h3>${label('checkInput')}</h3><p class="check-result" id="check-input" role="status"></p><p>${label('checkInputHelp')}</p></li>
-          <li><h3>${label('checkPlayback')}</h3><p class="check-result" id="check-playback" role="status"></p><p>${label('checkPlaybackHelp')}</p><button class="text-button" id="diagnostic-resume" type="button" hidden>${icon('play')}${label('resumeAudio')}</button></li>
+          <li><h3>${label('checkInput')}</h3><p class="check-result" id="check-input" role="status"></p><p id="check-input-help"></p><button class="text-button" id="diagnostic-start" type="button" hidden>${icon('mic')}${label('startListening')}</button></li>
+          <li><h3>${label('checkPlayback')}</h3><p class="check-result" id="check-playback" role="status"></p><p id="check-playback-help"></p><button class="text-button" id="diagnostic-resume" type="button" hidden>${icon('play')}${label('resumeAudio')}</button><button class="text-button" id="diagnostic-unmute" type="button" hidden>${icon('volume')}${label('restoreVolume')} ${DEFAULT_VOLUME * 100}%</button></li>
           <li><h3>${label('checkRemote')}</h3><p class="check-result">${label('remoteUnknown')}</p><p>${label('checkRemoteHelp')}</p></li>
-        </ol><div class="dialog-note">${icon('headphones')}<p>${label('guideNote')}</p></div>${closeButton()}
+        </ol><div class="dialog-note">${icon('headphones')}<p>${label('soundAdvice')}</p></div>${closeButton()}
       </dialog>
     </section>
     <footer class="privacy-row"><p>${icon('shield')}${label('privacyBody')}</p><button class="text-button" id="guide-open" type="button">${label('guide')}${icon('chevron')}</button></footer>
@@ -132,14 +132,26 @@ function playbackKey() {
 }
 
 function renderSound() {
+  const mic = media.microphone;
   const input = inputKey();
-  $('mic-status').textContent = t(media.microphone.error ? 'error' : input);
-  $('playback-status').textContent = isEngaged(media.microphone) ? t(playbackKey()) : '';
+  const playback = playbackKey();
+  $('mic-status').textContent = t(mic.error ? 'error' : input);
+  $('playback-status').textContent = ['active', 'paused'].includes(mic.status) ? t(playback) : '';
   $('check-input').textContent = t(input);
-  $('check-playback').textContent = t(playbackKey());
-  $('diagnostic-resume').hidden = media.microphone.status !== 'paused';
-  $('audio-scene-title').textContent = t(media.microphone.muted ? 'inputInterrupted' : media.microphone.status === 'paused' ? 'paused' : 'listeningTitle');
-  $('scene-caption').textContent = t(input);
+  $('check-playback').textContent = t(playback);
+  const inputHelp = mic.error ? 'checkInputError' : mic.status === 'requesting' ? 'micPendingBody'
+    : !isEngaged(mic) ? 'checkInputStart' : mic.muted ? 'checkInputInterrupted'
+      : mic.status === 'paused' ? 'checkInputPaused' : 'checkInputHelp';
+  $('check-input-help').textContent = t(inputHelp);
+  $('check-playback-help').textContent = t({ playbackOff: 'checkPlaybackOff', playbackMuted: 'checkPlaybackMuted', paused: 'checkPlaybackPaused', playbackRunning: 'checkPlaybackHelp' }[playback]);
+  $('diagnostic-start').hidden = isEngaged(mic) || Boolean(media.unavailable);
+  $('diagnostic-resume').hidden = mic.status !== 'paused';
+  $('diagnostic-unmute').hidden = mic.status !== 'active' || media.volume !== 0;
+  const sceneTitle = mic.status === 'requesting' ? 'micPendingTitle' : mic.muted ? 'inputInterrupted'
+    : mic.status === 'paused' ? 'paused' : media.volume === 0 ? 'playbackMutedTitle' : 'listeningTitle';
+  $('audio-scene-title').textContent = t(sceneTitle);
+  $('scene-caption').textContent = t(mic.status === 'requesting' ? 'micPendingBody' : input);
+  $('scene-meter').hidden = mic.status === 'requesting';
 }
 
 function renderSource(name) {
@@ -149,7 +161,7 @@ function renderSource(name) {
   $(`${name}-source-status`).hidden = !statusKey;
   $(`${name}-source-status`).textContent = statusKey ? t(statusKey) : '';
   const devices = media.devices[name];
-  $(`${name}-source-name`).textContent = source.label || t('defaultSource');
+  $(`${name}-source-name`).textContent = source.label || t(isEngaged(device) && device.status !== 'requesting' ? 'sourceUnnamed' : 'sourcePending');
   const picker = $(`${name}-device`);
   const value = source.id;
   const choices = [{ id: '', label: t('defaultSource') }, ...devices];
@@ -168,6 +180,7 @@ function renderSource(name) {
     nextFocus.focus({ preventScroll: true });
   }
   $(`${name}-picker`).hidden = hidePicker;
+  $(`${name}-source-name`).hidden = !hidePicker;
 }
 
 function render() {
@@ -177,35 +190,39 @@ function render() {
   const cameraActive = camera.status === 'active';
   const cameraBusy = camera.status === 'requesting';
   const micEngaged = isEngaged(mic);
-  const audioOnly = !cameraActive && !cameraBusy && ['active', 'paused'].includes(mic.status);
+  const audioOnly = !cameraActive && !cameraBusy && micEngaged;
   const cameraState = camera.muted && cameraActive ? 'paused' : camera.status;
   document.querySelector('.intro').classList.toggle('is-compact', media.engaged);
   $('stage').dataset.state = cameraState;
   $('preview-name').textContent = t(audioOnly ? 'audioOnly' : 'preview');
-  const stageKey = audioOnly ? (mic.muted ? 'interrupted' : mic.status === 'paused' ? 'paused' : 'listening')
+  const stageKey = audioOnly ? (mic.status === 'requesting' ? 'connecting' : mic.muted ? 'interrupted' : mic.status === 'paused' ? 'paused' : media.volume === 0 ? 'playbackMutedShort' : 'listening')
     : format.busy ? 'formatSwitching' : { idle: 'standby', requesting: 'connecting', active: 'live', paused: 'interrupted', error: 'needsAttention' }[cameraState];
-  $('preview-status').dataset.state = audioOnly ? (mic.muted ? 'paused' : mic.status) : format.busy ? 'requesting' : cameraState;
+  $('preview-status').dataset.state = audioOnly ? (mic.status === 'active' && (mic.muted || media.volume === 0) ? 'paused' : mic.status) : format.busy ? 'requesting' : cameraState;
   $('preview-status-text').textContent = t(stageKey);
   $('empty-state').hidden = (cameraActive && !camera.muted) || audioOnly;
   $('audio-scene').hidden = !audioOnly;
-  document.querySelector('.preview-footer').hidden = audioOnly;
+  document.querySelector('.preview-footer').hidden = !cameraActive;
   document.querySelector('.input-status').hidden = audioOnly;
-  const emptyKeys = cameraBusy ? ['pendingTitle', format.busy ? 'formatPendingBody' : 'pendingBody', 'pendingHint']
-    : camera.error ? ['errorTitle', camera.error, 'emptyHint']
-    : camera.muted ? ['pausedTitle', 'pausedBody', 'emptyHint'] : ['emptyTitle', 'emptyBody', 'emptyHint'];
+  const emptyKeys = cameraBusy ? [format.busy ? 'formatPendingTitle' : 'pendingTitle', format.busy ? 'formatPendingBody' : 'pendingBody', 'pendingHint']
+    : camera.error ? ['errorTitle', camera.error, null]
+    : camera.muted ? ['pausedTitle', 'pausedBody', null] : ['emptyTitle', 'emptyBody', 'emptyHint'];
   $('empty-title').textContent = t(emptyKeys[0]);
   $('empty-body').textContent = t(emptyKeys[1]);
-  $('empty-hint').textContent = t(emptyKeys[2]);
+  $('empty-hint').textContent = emptyKeys[2] ? t(emptyKeys[2]) : '';
+  $('empty-hint').hidden = !emptyKeys[2] || Boolean(media.unavailable);
+  $('empty-action').textContent = t(camera.error ? 'retryCamera' : 'startCamera');
   $('empty-start').hidden = cameraBusy || cameraActive;
   $('empty-start').disabled = Boolean(media.unavailable);
   $('portal-illustration').classList.toggle('is-pending', cameraBusy);
   const settings = media.cameraStream?.getVideoTracks()[0]?.getSettings();
   const frameRate = settings?.frameRate ? `${Math.round(settings.frameRate * 10) / 10} ${t('fps')}` : '';
   $('preview-detail').textContent = cameraActive && settings?.width && settings?.height
-    ? [`${settings.width} × ${settings.height}`, frameRate, cameraRatioLabel(settings), t(cameraModeLabel(settings))].filter(Boolean).join(' · ') : t(audioOnly ? 'audioLocal' : 'qualityDefault');
+    ? [`${settings.width} × ${settings.height}`, frameRate, cameraRatioLabel(settings), t(cameraModeLabel(settings))].filter(Boolean).join(' · ') : t('captureUnknown');
   $('preview-detail').title = cameraActive ? t('formatModeHelp') : '';
   $('camera-source').textContent = cameraActive ? media.getSource('camera').label : '';
-  $('audio-source').textContent = media.getSource('microphone').label || t('defaultSource');
+  const audioSource = media.getSource('microphone');
+  $('audio-source').textContent = audioSource.label || t('sourceUnnamed');
+  $('audio-source').hidden = mic.status === 'requesting' && !audioSource.label;
   for (const name of ['camera', 'microphone']) renderSource(name);
   $('devices-error').hidden = !media.deviceListError;
   $('camera-format').value = format.selected;
@@ -217,6 +234,7 @@ function render() {
   $('picture-notice').hidden = !format.notice;
   $('picture-notice').textContent = $('format-notice').textContent;
   $('allow-crop').hidden = !format.fallback;
+  $('crop-help').hidden = !format.fallback;
   $('allow-crop').textContent = `${t('formatAllowCrop')}${format.fallback ? ` · ${format.fallback}` : ''}`;
   if (!format.busy && media.cameraFormat !== savedCameraFormat) {
     savedCameraFormat = media.cameraFormat;
@@ -341,6 +359,15 @@ $('allow-crop').addEventListener('click', () => { $('camera-format').focus({ pre
 for (const name of ['camera', 'microphone']) $(`${name}-device`).addEventListener('change', (event) => { void media.selectDevice(name, event.target.value); });
 $('microphone-switch').addEventListener('click', () => isEngaged(media.microphone) ? media.stopMicrophone() : media.startMicrophone());
 $('stop-all').addEventListener('click', () => media.stopAll());
+$('diagnostic-start').addEventListener('click', () => {
+  $('sound-dialog').querySelector('form button').focus({ preventScroll: true });
+  void media.startMicrophone();
+});
+$('diagnostic-unmute').addEventListener('click', () => {
+  $('sound-dialog').querySelector('form button').focus({ preventScroll: true });
+  media.setVolume(DEFAULT_VOLUME);
+  render();
+});
 for (const id of ['resume-audio', 'diagnostic-resume']) $(id).addEventListener('click', () => {
   const nextFocus = id === 'diagnostic-resume' ? $('sound-dialog').querySelector('form button') : $('sound-help');
   nextFocus.focus({ preventScroll: true });

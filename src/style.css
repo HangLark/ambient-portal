@@ -120,12 +120,11 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .language-button .icon { width: 15px; height: 15px; }
 .main-content { padding-top: 25px; padding-bottom: 18px; }
 .intro { margin-bottom: 24px; }
-.eyebrow { font-size: 10px; color: var(--muted); letter-spacing: 1.6px; line-height: 1.6; }
-h1 { font-size: clamp(26px, 2.6vw, 33px); font-weight: 480; letter-spacing: -1px; line-height: 1.4; margin-top: 7px; }
+h1 { font-size: clamp(26px, 2.6vw, 33px); font-weight: 480; letter-spacing: -1px; line-height: 1.4; }
 .intro-description { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 7px; }
 .intro.is-compact { margin-bottom: 16px; }
 .intro.is-compact h1 { margin-top: 0; font-size: 19px; letter-spacing: -.3px; }
-.intro.is-compact .eyebrow, .intro.is-compact .intro-description { display: none; }
+.intro.is-compact .intro-description { display: none; }
 .environment-error { display: flex; gap: 10px; align-items: center; border: 1px solid var(--warning-border); border-radius: 8px; padding: 14px; font-size: 13px; line-height: 1.7; color: var(--warning); margin-bottom: 18px; }
 .workspace { border: 1px solid var(--border); border-radius: 13px; background: var(--panel-bg); box-shadow: 0 14px 50px var(--shadow); }
 .panel-toolbar { display: flex; gap: 15px; align-items: center; padding: 5px 14px 5px 20px; min-height: 52px; border-bottom: 1px solid var(--border-soft); }
@@ -228,7 +227,7 @@ dialog h3 { font-size: 13px; font-weight: 550; }
 .dialog-note .icon { width: 15px; height: 15px; margin-top: 5px; color: var(--accent); }
 .dialog-note p { margin-top: 0; }
 dialog form { margin-top: 23px; }
-dialog form .primary-button { width: 100%; }
+dialog form .dialog-close { width: 100%; min-height: 44px; border: 1px solid var(--border-strong); }
 .settings-section { padding: 19px 0; border-bottom: 1px solid var(--border); }
 .settings-section h3 { display: flex; align-items: center; gap: 8px; }
 .settings-section h3 .icon { width: 16px; height: 16px; color: var(--accent); }
@@ -237,11 +236,12 @@ dialog form .primary-button { width: 100%; }
 .source-picker label, .format-control label { display: block; font-size: 12px; margin-bottom: 8px; color: var(--muted); }
 select { width: 100%; min-width: 0; min-height: 43px; padding: 8px 11px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--field-bg); color: var(--text); font-size: 13px; cursor: pointer; }
 select:hover { border-color: var(--accent-border); }
-#format-help, .settings-note { font-size: 11px; }
+#format-help, #crop-help, .settings-note { font-size: 11px; }
 .crop-button { margin-top: 8px; width: 100%; padding: 10px; min-height: 42px; border: 1px solid var(--warning-border); border-radius: 6px; background: var(--warning-bg); color: var(--warning); font-size: 12px; }
 .crop-button:hover { background: var(--warning-hover); }
 .sound-checks .check-result { color: var(--accent); margin-top: 4px; }
 .sound-checks p { margin-top: 5px; }
+.sound-checks .text-button { color: var(--accent); margin-top: 4px; }
 .workspace:fullscreen { width: 100%; height: 100%; border: 0; border-radius: 0; display: flex; flex-direction: column; background: var(--panel-bg); overflow: auto; }
 .workspace:fullscreen .stage { flex: 1; height: auto; min-height: 180px; }
 .workspace:fullscreen .panel-toolbar, .workspace:fullscreen .preview-footer, .workspace:fullscreen .control-panel { flex-shrink: 0; }
@@ -251,7 +251,7 @@ html[lang='zh-CN'] h1, html[lang='zh-CN'] .empty-state h3 { letter-spacing: .4px
 @media (min-width: 681px) and (max-height: 850px) {
   .main-content { padding-top: 16px; }
   .intro { margin-bottom: 16px; }
-  .intro .eyebrow, .intro .intro-description { display: none; }
+  .intro .intro-description { display: none; }
   .intro h1 { margin-top: 0; font-size: 24px; }
   .portal-illustration { width: 80px; height: 80px; margin-bottom: 12px; }
   .empty-state { padding: 15px 0; }
