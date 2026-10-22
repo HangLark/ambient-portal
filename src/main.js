@@ -1,7 +1,7 @@
 import './style.css';
 import { icon } from './icons.js';
 import { detectLanguage, saveLanguage, translate } from './i18n.js';
-import { MediaController } from './media.js';
+import { MediaController, isEngaged } from './media.js';
 
 let storage;
 try { storage = window.localStorage; } catch { /* The app also works without storage. */ }
@@ -91,7 +91,6 @@ let levelFrame = 0;
 let lastMeterTime = 0;
 let fullscreenError = false;
 const meterBars = [...$('level-meter').children];
-const engaged = (device) => ['requesting', 'active', 'paused'].includes(device.status);
 
 function stateLabel(device) {
   if (device.muted && device.status === 'active') return 'interrupted';
@@ -107,7 +106,7 @@ function render() {
   const mic = media.microphone;
   const cameraActive = camera.status === 'active';
   const cameraBusy = camera.status === 'requesting';
-  const micEngaged = engaged(mic);
+  const micEngaged = isEngaged(mic);
   const cameraState = camera.muted && cameraActive ? 'paused' : camera.status;
   $('stage').dataset.state = cameraState;
   $('preview-status').dataset.state = cameraState;
@@ -130,7 +129,7 @@ function render() {
   $('camera-pill').dataset.state = cameraState;
   $('camera-action').textContent = t(cameraBusy ? 'cancel' : cameraActive ? 'stopCamera' : camera.error ? 'retryCamera' : 'startCamera');
   $('camera-action-icon').innerHTML = icon(cameraBusy ? 'x' : cameraActive ? 'stop' : 'arrow');
-  $('camera-button').classList.toggle('is-active', engaged(camera));
+  $('camera-button').classList.toggle('is-active', isEngaged(camera));
   $('camera-button').disabled = Boolean(media.unavailable);
   $('camera-button').setAttribute('aria-busy', String(cameraBusy));
   $('microphone-switch').setAttribute('aria-checked', String(micEngaged));
@@ -206,8 +205,8 @@ $('language').addEventListener('click', () => {
   saveLanguage(storage, language);
   applyLanguage();
 });
-$('camera-button').addEventListener('click', () => engaged(media.camera) ? media.stopCamera() : media.startCamera());
-$('microphone-switch').addEventListener('click', () => engaged(media.microphone) ? media.stopMicrophone() : media.startMicrophone());
+$('camera-button').addEventListener('click', () => isEngaged(media.camera) ? media.stopCamera() : media.startCamera());
+$('microphone-switch').addEventListener('click', () => isEngaged(media.microphone) ? media.stopMicrophone() : media.startMicrophone());
 $('stop-all').addEventListener('click', () => media.stopAll());
 $('resume-audio').addEventListener('click', () => media.resumeAudio());
 $('volume').addEventListener('input', (event) => { media.setVolume(Number(event.target.value) / 100); render(); });

@@ -1,6 +1,6 @@
 const idleDevice = () => ({ status: 'idle', error: null, muted: false });
 const stopTracks = (stream) => stream?.getTracks().forEach((track) => track.stop());
-const isEngaged = (device) => ['requesting', 'active', 'paused'].includes(device.status);
+export const isEngaged = (device) => ['requesting', 'active', 'paused'].includes(device.status);
 
 export function mediaErrorKey(error, device) {
   switch (error?.name) {

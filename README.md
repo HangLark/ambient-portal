@@ -4,6 +4,8 @@
 
 [English](README.en.md) · 简体中文
 
+![Ambient Portal 中文桌面界面](docs/preview.zh-CN.png)
+
 Ambient Portal 是一个轻量的纯前端环境感知工具。在被控设备上打开网页，就能通过摄像头观察周围，通过麦克风监听环境声音。配合 UU 远程等远程桌面软件的屏幕与系统声音转发，在另一台设备上也能感知现场。
 
 Vite + 原生 JavaScript + 浏览器 Web API。无后端、账号、数据库或生产运行时依赖，不录制、不保存、不上传音视频。唯一持久化的数据是保存在当前浏览器 `localStorage` 中的语言偏好。
