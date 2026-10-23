@@ -61,7 +61,7 @@ Production preview: `http://127.0.0.1:4173/ambient-portal/`. The preview server 
 ## Use the app
 
 1. Open the page in Chrome or Edge on the **controlled device**. Click **Start camera** and allow camera access.
-2. Enable **Listen** when you want sound, then check the output reminder. Click **Checked, start listening** and allow microphone access. Sound plays through **the controlled device’s default system audio output**.
+2. Enable **Listen** when you want sound, then check that the controlled device won’t play sound through its speakers. Click **Start listening** and allow microphone access. This page sends sound to **the controlled device’s default system audio output**, where your remote app can capture it.
 3. If playback is paused by the browser, click **Resume audio**. Start at a low volume and adjust as needed.
 4. The speaker button beside the volume slider immediately mutes playback; click again to restore its level. The microphone keeps capturing, but remote forwarding receives no sound from this page. **Stop camera** stops video only; turning **Listen** off releases the microphone. **Stop all** releases both devices.
 5. Leaving or refreshing the page also stops capture. Saved browser permission never starts capture automatically on your next visit.
@@ -82,11 +82,11 @@ Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perc
 
 ### Output checks and playback mute
 
-The first start after opening or refreshing the page asks you to check system mute, headphones, or another output on the controlled device. Cancel, Escape, or clicking outside the dialog leaves the microphone off. Confirmation lasts only for the current page and is not stored. Starting from **Can’t hear anything?** follows the same flow. The page cannot reliably read system mute; confirmation records your check, not an automatic mute detection.
+The first start after opening or refreshing the page reminds you to avoid speaker playback on the controlled device. Use your remote app’s option to mute that device, if available, or connect headphones there. Keep this page’s playback and remote audio forwarding on. Cancel, Escape, or clicking outside the dialog leaves the microphone off. Confirmation lasts only for the current page and is not stored. Starting from **Can’t hear anything?** follows the same flow. The page cannot reliably read system mute; confirmation records your check, not an automatic mute detection.
 
 - **Temporary mute:** the speaker button stops playback immediately while the camera, microphone, and input meter continue. Click again to restore the last nonzero level, including 200% within the same listening session. It also restores playback after moving the slider to 0%. Sound checks retain a separate action to restore the default 35%.
 - **Reopening:** a previous level above 100% resets to 35% with a visible explanation; levels up to 100% are retained. If playback was muted when stopped, it stays muted and cannot restore an old boost later. Switching microphones follows the same rule.
-- **Playback location:** the page identifies **controlled device · system default**. Muting this page also silences its feed to remote software; it cannot mute the controlled device while keeping remote playback audible. Use headphones or output routing supported by your remote app. System mute may also silence forwarded sound.
+- **Two different mute controls:** a remote app’s option to mute the controlled device can silence its speakers while keeping remote listening available. **Mute this page’s playback** stops this page’s audio feed, so the listening device also receives no sound from it. **Audio output: controlled device · system default** identifies the output route; it does not mean the local speakers are audible.
 
 ### Aspect ratios
 
@@ -110,16 +110,16 @@ Open **Devices** above the preview for actual input names and audio specificatio
 - With only the microphone on, the main view shows listening status, actual source, and input level. At 0% playback volume, capture and the input meter continue; switch monitoring off to release the microphone.
 - The audio-only view also identifies startup, muted playback, and interrupted input. At 0%, **Can’t hear anything?** can restore volume to 35% without restarting capture. Every action in sound checks requires an explicit click.
 - **No clear sound detected yet** means no substantial input is currently detected, not a device failure. Interrupted input, paused browser playback, and zero playback volume have distinct states. A suspended audio context does not pretend to measure input levels.
-- **Can’t hear anything?** reports the input and playback states observable by this page. **Playing on the controlled device** does not confirm an audible system output or remote reception. Check system volume, output routing, and remote software forwarding separately.
+- **Can’t hear anything?** follows microphone input, this page’s playback, and sound on the listening device. **Page playback is on** means the browser is producing audio, not that local speakers or remote listening are audible. The dialog also explains what to check if remote sound stops only after muting the controlled device in system settings.
 
 ### Remote desktop audio
 
 Ambient Portal does not stream media over the network. Enable **system audio / computer sound forwarding from the controlled device** in UU Remote or your remote desktop app. Names, support, and output routing depend on that software and the operating system.
 
 - Enable both microphone monitoring here and system audio forwarding in your remote app. Voice chat or forwarding the controlling device’s microphone is a different feature.
-- Playback happens on the controlled device. Use **headphones on that device**, or a suitable virtual output that your remote software can capture. Otherwise its microphone may pick up its own speakers, creating echo or feedback. Headphones only on the controlling device do not prevent this loop.
+- This page outputs microphone audio for your remote app to capture and forward. To avoid local speaker playback, use the remote app’s option to **mute the controlled device**, if available, or connect headphones or a suitable virtual audio output there. Headphones only on the listening device do not prevent feedback from the controlled device’s speakers.
 - Echo cancellation, noise suppression, and automatic gain are requested off to preserve ambient sound; actual processing support depends on the device and browser. Avoid routing speaker output back into the microphone, especially when amplifying playback.
-- Muting the controlled computer or browser may also silence forwarded audio. Check browser, system, and remote app volume and routing. Test with low volume first.
+- Keep this page’s playback on and the browser tab unmuted. System speaker mute and this page’s mute act at different points: whether system mute affects forwarding depends on how your remote app captures audio. If sound stops only after system mute, check the remote app’s mute and output settings; prefer its dedicated option to mute the controlled device when available.
 - Keep the controlled device awake and the browser and page open. Sleep, browser background limits, or device changes may interrupt capture or playback. The UI reflects track interruptions and audio suspension; mobile background behavior is browser-dependent.
 
 ### Permissions and secure contexts

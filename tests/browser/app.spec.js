@@ -46,7 +46,7 @@ test('camera and microphone operate independently and stop releases every track'
   await expect.poll(() => page.locator('video').evaluate((video) => video.videoWidth)).toBeGreaterThan(0);
   await expect(page.locator('#mic-status')).toHaveText('Microphone off');
   await toggleListening(page);
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await expect(page.locator('#volume')).toBeEnabled();
   await page.locator('#volume').focus();
   await page.locator('#volume').press('ArrowRight');
@@ -60,7 +60,7 @@ test('camera and microphone operate independently and stop releases every track'
   await expect(page.locator('#volume-value')).toHaveText('0%');
   await expect(page.locator('#volume-boost-hint')).toBeHidden();
   await page.getByRole('button', { name: 'Stop camera' }).click();
-  await expect(page.locator('#playback-status')).toHaveText('Playback muted · 0%');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback muted · 0%');
   await expect(page.locator('#preview-status-text')).toHaveText('Muted');
   await page.getByRole('button', { name: 'Stop all' }).click();
   await expect(page.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
@@ -73,7 +73,7 @@ test('capture prefers the highest device specifications and displays the actual 
   await page.locator('#camera-button').click();
   await expect(page.locator('#preview-status-text')).toHaveText('Live');
   await toggleListening(page);
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   const tracks = await page.evaluate(() => window.__testTracks.map((track) => ({
     kind: track.kind, capabilities: track.getCapabilities(), constraints: track.getConstraints(), settings: track.getSettings(),
   })));
@@ -105,7 +105,7 @@ test('capture prefers the highest device specifications and displays the actual 
 test('active audio specifications and amplified volume fit both languages on desktop and mobile', async ({ page }, testInfo) => {
   await page.goto('./');
   await toggleListening(page);
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await page.locator('#volume').focus();
   await page.locator('#volume').press('End');
   for (const [name, width, height] of [['desktop', 1440, 1000], ['mobile', 390, 844], ['narrow', 320, 760]]) {
@@ -127,7 +127,7 @@ test('active audio specifications and amplified volume fit both languages on des
 test('microphone can start before the camera and pagehide releases it', async ({ page }) => {
   await page.goto('./');
   await toggleListening(page);
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await expect(page.locator('#camera-button')).toHaveText('Start camera');
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
   await expect(page.locator('#mic-status')).toHaveText('Microphone off');

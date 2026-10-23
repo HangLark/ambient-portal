@@ -53,7 +53,7 @@ test('start is above the fold; desktop, mobile and fullscreen keep the complete 
   await expect(page.locator('#preview-status-text')).toHaveText('Live');
   await expect(page.locator('#camera-button')).toBeFocused();
   await toggleListening(page);
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await page.locator('#fullscreen').click();
   expect(await page.evaluate(() => document.fullscreenElement.id)).toBe('workspace');
   for (const selector of ['#camera-button', '#microphone-switch', '#stop-all', '#volume', '#settings-open']) await expectReachable(page, selector);
@@ -99,11 +99,11 @@ test('sound checks distinguish quiet input, signal, zero gain, interruption and 
   await expect(page.locator('#scene-caption')).toHaveText('Sound detected');
   await page.locator('#volume').focus();
   await page.locator('#volume').press('Home');
-  await expect(page.locator('#playback-status')).toHaveText('Playback muted · 0%');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback muted · 0%');
   await expect(page.locator('#scene-meter .lit')).toHaveCount(40);
   await page.locator('#sound-help').click();
   await expect(page.locator('#check-input')).toHaveText('Sound detected');
-  await expect(page.locator('#check-playback')).toHaveText('Playback muted · 0%');
+  await expect(page.locator('#check-playback')).toHaveText('Page playback muted · 0%');
   await expect(page.locator('#sound-dialog')).toContainText('cannot detect whether remote sound forwarding is working');
   await page.keyboard.press('Escape');
   await expect(page.locator('#sound-help')).toBeFocused();
@@ -129,7 +129,7 @@ test('sound checks distinguish quiet input, signal, zero gain, interruption and 
   await expect(page.locator('#check-playback')).toHaveText('回放已暂停');
   await page.screenshot({ path: testInfo.outputPath('sound-checks-zh-CN.png'), fullPage: true });
   await page.locator('#diagnostic-resume').click();
-  await expect(page.locator('#check-playback')).toHaveText('回放已静音 · 0%');
+  await expect(page.locator('#check-playback')).toHaveText('本页回放已静音 · 0%');
   await page.keyboard.press('Escape');
   await page.locator('#stop-all').click();
   expect(await page.evaluate(() => window.__captures.every(({ track }) => track.readyState === 'ended'))).toBe(true);
@@ -145,7 +145,7 @@ test('permission-aware input pickers switch only the selected channel and expose
   await page.keyboard.press('Escape');
   await page.locator('#camera-button').click();
   await toggleListening(page);
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await page.locator('#settings-open').click();
   await expect(page.locator('#camera-source-name')).toHaveText('Studio camera-a');
   await expect(page.locator('#microphone-source-name')).toHaveText('Studio mic-a');
@@ -160,7 +160,7 @@ test('permission-aware input pickers switch only the selected channel and expose
   await page.locator('#settings-open').click();
   await page.locator('#microphone-device').selectOption('mic-b');
   await expect(page.locator('#microphone-source-name')).toHaveText('Studio mic-b');
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await expect(page.locator('#volume-value')).toHaveText('35%');
   await expect(page.locator('#microphone-source-status')).toContainText('previous gain exceeded 100%');
   expect(await page.evaluate(() => window.__captures[2].track.readyState)).toBe('live');
@@ -178,7 +178,7 @@ test('permission-aware input pickers switch only the selected channel and expose
   await page.keyboard.press('Escape');
   await page.locator('#camera-button').click();
   await expect(page.locator('#camera-error')).toContainText('selected device is unavailable');
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await page.locator('#settings-open').click();
   await page.locator('#camera-device').selectOption('camera-a');
   await page.keyboard.press('Escape');
@@ -198,7 +198,7 @@ test('source failures are visible inside settings without stopping the other inp
   await page.goto('./');
   await page.locator('#camera-button').click();
   await toggleListening(page);
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await page.locator('#settings-open').click();
   await page.evaluate(() => { window.__rejectSource = 'camera-b'; });
   await page.locator('#camera-device').selectOption('camera-b');
@@ -246,7 +246,7 @@ test('sound checks start listening and restore muted playback without restarting
     await page.locator('#diagnostic-start').click();
     await expect(page.locator('#playback-dialog')).toBeVisible();
     await page.locator('#playback-confirm').click();
-    await expect(page.locator('#check-playback')).toHaveText(language === 'en-US' ? 'Playing on the controlled device' : '正在被控设备回放');
+    await expect(page.locator('#check-playback')).toHaveText(language === 'en-US' ? 'Page playback is on' : '本页回放已开启');
     await expect(page.locator('#diagnostic-start')).toBeHidden();
     await expect(page.locator('#sound-dialog form button')).toBeFocused();
     expect(await page.evaluate(() => window.__captures[0].track.readyState)).toBe('live');
@@ -254,7 +254,7 @@ test('sound checks start listening and restore muted playback without restarting
     await page.locator('#volume').press('Home');
     await page.locator('#camera-button').click();
     await expect(page.locator('#preview-status-text')).toHaveText(language === 'en-US' ? 'Muted' : '回放静音');
-    await expect(page.locator('#audio-scene-title')).toHaveText(language === 'en-US' ? 'Playback is muted' : '回放已静音');
+    await expect(page.locator('#audio-scene-title')).toHaveText(language === 'en-US' ? 'This page’s playback is muted' : '本页回放已静音');
     await expect(page.locator('#preview-status')).toHaveAttribute('data-state', 'paused');
     await page.locator('#sound-help').click();
     await expect(page.locator('#check-playback-help')).toContainText(language === 'en-US' ? 'microphone is still capturing' : '麦克风仍在采集');

@@ -101,7 +101,7 @@ document.querySelector('#app').innerHTML = `
         <p>${label('soundIntro')}</p><ol class="sound-checks">
           <li><h3>${label('checkInput')}</h3><p class="check-result" id="check-input" role="status"></p><p id="check-input-help"></p><button class="text-button" id="diagnostic-start" type="button" hidden>${icon('mic')}${label('startListening')}</button></li>
           <li><h3>${label('checkPlayback')}</h3><p class="check-result" id="check-playback" role="status"></p><p id="check-playback-help"></p><button class="text-button" id="diagnostic-resume" type="button" hidden>${icon('play')}${label('resumeAudio')}</button><button class="text-button" id="diagnostic-unmute" type="button" hidden>${icon('volume')}${label('restoreVolume')} ${DEFAULT_VOLUME * 100}%</button></li>
-          <li><h3>${label('checkRemote')}</h3><p class="check-result">${label('remoteUnknown')}</p><p>${label('checkRemoteHelp')}</p></li>
+          <li><h3>${label('checkRemote')}</h3><p class="check-result">${label('remoteUnknown')}</p><p>${label('checkRemoteHelp')}</p><p>${label('checkSystemMute')}</p></li>
         </ol><div class="dialog-note">${icon('headphones')}<p>${label('soundAdvice')}</p></div>${closeButton()}
       </dialog>
     </section>

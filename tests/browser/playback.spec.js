@@ -23,11 +23,11 @@ test('playback warning precedes microphone permission, can be cancelled, and las
   await page.locator('#microphone-switch').click();
   await page.locator('#playback-confirm').click();
   await expect(page.locator('#playback-dialog')).toBeHidden();
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   expect(await page.evaluate(() => window.__microphoneRequests)).toBe(1);
   await page.locator('#microphone-switch').click();
   await page.locator('#microphone-switch').click();
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await expect(page.locator('#playback-dialog')).toBeHidden();
   await page.reload();
   await page.locator('#microphone-switch').click();
@@ -62,7 +62,7 @@ test('one-click mute keeps capture live, restores its gain, and reopening protec
   await expect(page.locator('#volume-value')).toHaveText('0%');
   expect(await page.evaluate(() => window.__playbackGain.gain.value)).toBe(0);
   await expect(page.locator('#playback-muted-help')).toContainText('microphone is still capturing');
-  await expect(page.locator('#mute-playback')).toHaveAccessibleName('Unmute playback · 200%');
+  await expect(page.locator('#mute-playback')).toHaveAccessibleName('Unmute this page’s playback · 200%');
   expect(await page.evaluate(() => window.__playbackTracks.length)).toBe(2);
   expect(await page.evaluate(() => window.__playbackTracks.every((track) => track.readyState === 'live'))).toBe(true);
   await page.locator('#mute-playback').press('Enter');
@@ -80,7 +80,7 @@ test('one-click mute keeps capture live, restores its gain, and reopening protec
   await page.locator('#microphone-switch').click();
   await expect(page.locator('#volume')).toBeEnabled();
   await expect(page.locator('#volume-value')).toHaveText('0%');
-  await expect(page.locator('#mute-playback')).toHaveAccessibleName('Unmute playback · 35%');
+  await expect(page.locator('#mute-playback')).toHaveAccessibleName('Unmute this page’s playback · 35%');
   await page.locator('#mute-playback').click();
   await expect(page.locator('#volume-value')).toHaveText('35%');
   await page.locator('#stop-all').click();
@@ -95,19 +95,19 @@ test('the sound-check shortcut requires confirmation and returns focus correctly
     await page.locator('#diagnostic-start').click();
     await expect(page.locator('#playback-dialog')).toBeVisible();
     await expect(page.locator('#playback-cancel')).toBeFocused();
-    await expect(page.locator('#playback-warning')).toContainText(language === 'en-US' ? 'cannot detect' : '无法检测');
+    await expect(page.locator('#playback-warning')).toContainText(language === 'en-US' ? 'remote audio forwarding' : '远程声音转发');
     await expect(page.locator('#microphone-switch')).toHaveAttribute('aria-checked', 'false');
     await page.keyboard.press('Escape');
     await expect(page.locator('#sound-dialog')).toBeVisible();
     await expect(page.locator('#diagnostic-start')).toBeFocused();
     await page.locator('#diagnostic-start').press('Enter');
     await page.locator('#playback-confirm').press('Enter');
-    await expect(page.locator('#check-playback')).toHaveText(language === 'en-US' ? 'Playing on the controlled device' : '正在被控设备回放');
+    await expect(page.locator('#check-playback')).toHaveText(language === 'en-US' ? 'Page playback is on' : '本页回放已开启');
     await expect(page.locator('#sound-dialog form button')).toBeFocused();
     await page.keyboard.press('Escape');
     await page.locator('#mute-playback').click();
-    await expect(page.locator('#mute-playback')).toHaveAccessibleName(language === 'en-US' ? 'Unmute playback · 35%' : '取消回放静音 · 35%');
-    await expect(page.locator('#playback-muted-help')).toContainText(language === 'en-US' ? 'remote forwarding' : '远程转发');
+    await expect(page.locator('#mute-playback')).toHaveAccessibleName(language === 'en-US' ? 'Unmute this page’s playback · 35%' : '取消本页静音 · 35%');
+    await expect(page.locator('#playback-muted-help')).toContainText(language === 'en-US' ? 'Remote forwarding' : '远程转发');
     await page.locator('#stop-all').click();
   }
 });
@@ -164,6 +164,6 @@ test('denied microphone permission can be retried after confirmation without a s
   await expect(page.locator('#microphone-switch')).toBeFocused();
   await page.locator('#microphone-switch').click();
   await expect(page.locator('#playback-dialog')).toBeHidden();
-  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
   await page.locator('#stop-all').click();
 });
