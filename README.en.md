@@ -17,7 +17,7 @@ English · [简体中文](README.md)
 
 Ambient Portal is a lightweight, browser-only window into the environment around a device. Open it on a computer you control remotely to preview its camera and play its microphone through the local browser. A remote desktop app such as UU Remote forwards the screen and system audio to your other device.
 
-Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accounts, database, or production runtime dependencies. No media recording, storage, or uploading. Only language, appearance, and aspect ratio preferences persist in this browser’s `localStorage`.
+Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accounts, database, or production runtime dependencies. No media recording, storage, or uploading. Only language, appearance, aspect ratio, and playback reminder preferences persist in this browser’s `localStorage`.
 
 ## Features
 
@@ -30,7 +30,7 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 - Sound checks suggest the next step for the current state, with actions to start listening, resume paused playback, or restore muted volume to the default 35%.
 - Microphone capture prefers the highest available sample rate, bit depth, and channel count, showing the actual specifications reported by the browser. Echo cancellation, noise suppression, and automatic gain are requested off to preserve ambient sound.
 - Low latency Web Audio monitoring, a real input level meter, and 0–200% playback volume. Monitoring starts off, with an initial playback volume of 35% when enabled.
-- A reminder to check the controlled device’s audio output before listening. No microphone request or playback occurs before confirmation.
+- A reminder to check the controlled device’s audio output before the first listen. Choose not to be reminded in this browser, or turn reminders back on in Device settings.
 - One-click playback mute and restore. Reopening or switching microphones resets gain above 100% to 35%, while muted playback stays muted.
 - English and Simplified Chinese throughout, automatic browser language selection, and a saved preference.
 - Light and dark themes with automatic system appearance, responsive desktop and mobile layouts, keyboard controls, and reduced motion support.
@@ -82,7 +82,11 @@ Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perc
 
 ### Output checks and playback mute
 
-The first start after opening or refreshing the page reminds you to avoid speaker playback on the controlled device. Use your remote app’s option to mute that device, if available, or connect headphones there. Keep this page’s playback and remote audio forwarding on. Cancel, Escape, or clicking outside the dialog leaves the microphone off. Confirmation lasts only for the current page and is not stored. Starting from **Can’t hear anything?** follows the same flow. The page cannot reliably read system mute; confirmation records your check, not an automatic mute detection.
+By default, the first start after opening or refreshing the page reminds you to avoid speaker playback on the controlled device. Use your remote app’s option to mute that device, if available, or connect headphones there. Keep this page’s playback and remote audio forwarding on. No microphone request or playback occurs before confirmation. Cancel, Escape, or clicking outside the dialog leaves the microphone off and discards the checkbox choice.
+
+**Don’t remind me in this browser** is unchecked by default. The choice is saved only when checked and confirmed with **Start listening**, and survives reopening or refreshing the page. Without it, confirmation lasts only for the current page. Change the preference anytime in **Device settings → Microphone → Remind me before listening**. Turning reminders back on takes effect at the next manual start without interrupting current listening. If the browser cannot save the preference, a message explains that it applies only to the current page.
+
+Starting from **Can’t hear anything?** follows the same preference. Turning off reminders never starts listening automatically or bypasses browser microphone permissions. The page cannot reliably read system mute; confirmation records your check, not an automatic mute detection.
 
 - **Temporary mute:** the speaker button stops playback immediately while the camera, microphone, and input meter continue. Click again to restore the last nonzero level, including 200% within the same listening session. It also restores playback after moving the slider to 0%. Sound checks retain a separate action to restore the default 35%.
 - **Reopening:** a previous level above 100% resets to 35% with a visible explanation; levels up to 100% are retained. If playback was muted when stopped, it stays muted and cannot restore an old boost later. Switching microphones follows the same rule.
@@ -212,6 +216,8 @@ The suite starts a production preview and checks Pages asset paths and refresh, 
 Appearance tests also cover system changes, manual overrides and reloads, the palette before the application script loads, blocked local storage, bilingual layouts and dialogs in both themes, and uninterrupted capture, camera format, and playback gain while switching themes.
 
 Sound-check tests verify starting listening from the dialog, actual gain restoration from 0% to 35%, keyboard focus, and late-stream cleanup after cancelling microphone startup. The brand link returns to the page heading without reloading or interrupting capture.
+
+Playback reminder tests cover the default reminder, discarded choices on cancellation, persistence across reloads, restoring reminders in Device settings, the sound-check entry point, and feedback when storage access or writes fail. Layout checks cover both languages and themes, narrow screens, and fullscreen.
 
 ## Project structure
 

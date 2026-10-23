@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('playback warning precedes microphone permission, can be cancelled, and lasts only for this page', async ({ page }) => {
+test('the default reminder precedes microphone permission and discards unchecked or cancelled choices', async ({ page }) => {
   await page.addInitScript(() => {
     window.__microphoneRequests = 0;
     const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
@@ -10,17 +10,26 @@ test('playback warning precedes microphone permission, can be cancelled, and las
     };
   });
   await page.goto('./');
+  for (const dismiss of ['escape', 'cancel', 'backdrop']) {
+    await page.locator('#microphone-switch').click();
+    await expect(page.locator('#playback-dialog')).toBeVisible();
+    expect(await page.evaluate(() => window.__microphoneRequests)).toBe(0);
+    await expect(page.locator('#microphone-switch')).toHaveAttribute('aria-checked', 'false');
+    const choice = page.getByRole('checkbox', { name: 'Don’t remind me in this browser' });
+    await expect(choice).not.toBeChecked();
+    await choice.focus();
+    await choice.press('Space');
+    await expect(choice).toBeChecked();
+    if (dismiss === 'escape') await page.keyboard.press('Escape');
+    else if (dismiss === 'cancel') await page.locator('#playback-cancel').click();
+    else await page.mouse.click(1, 1);
+    await expect(page.locator('#playback-dialog')).toBeHidden();
+    await expect(page.locator('#microphone-switch')).toBeFocused();
+    expect(await page.evaluate(() => window.__microphoneRequests)).toBe(0);
+  }
+  await page.reload();
   await page.locator('#microphone-switch').click();
-  await expect(page.locator('#playback-dialog')).toBeVisible();
-  expect(await page.evaluate(() => window.__microphoneRequests)).toBe(0);
-  await expect(page.locator('#microphone-switch')).toHaveAttribute('aria-checked', 'false');
-  await page.keyboard.press('Escape');
-  await expect(page.locator('#microphone-switch')).toBeFocused();
-  expect(await page.evaluate(() => window.__microphoneRequests)).toBe(0);
-  await page.locator('#microphone-switch').click();
-  await page.locator('#playback-cancel').click();
-  expect(await page.evaluate(() => window.__microphoneRequests)).toBe(0);
-  await page.locator('#microphone-switch').click();
+  await expect(page.getByRole('checkbox', { name: 'Don’t remind me in this browser' })).not.toBeChecked();
   await page.locator('#playback-confirm').click();
   await expect(page.locator('#playback-dialog')).toBeHidden();
   await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
@@ -33,6 +42,82 @@ test('playback warning precedes microphone permission, can be cancelled, and las
   await page.locator('#microphone-switch').click();
   await expect(page.locator('#playback-dialog')).toBeVisible();
   expect(await page.evaluate(() => window.__microphoneRequests)).toBe(0);
+});
+
+test('the reminder can be skipped across reloads and restored without interrupting listening', async ({ page }) => {
+  await page.goto('./');
+  await page.locator('#microphone-switch').click();
+  const skipReminder = page.getByRole('checkbox', { name: 'Don’t remind me in this browser' });
+  await expect(skipReminder).not.toBeChecked();
+  await skipReminder.check();
+  await page.locator('#playback-confirm').click();
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+
+  await page.reload();
+  await expect(page.locator('#microphone-switch')).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('#playback-dialog')).toBeHidden();
+  await page.locator('#sound-help').click();
+  await page.locator('#diagnostic-start').click();
+  await expect(page.locator('#check-playback')).toHaveText('Page playback is on');
+  await expect(page.locator('#sound-dialog form button')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#playback-dialog')).toBeHidden();
+  await page.locator('#volume').press('End');
+
+  await page.locator('#settings-open').click();
+  const reminder = page.getByRole('switch', { name: 'Remind me before listening', exact: true });
+  await expect(reminder).toHaveAttribute('aria-checked', 'false');
+  await reminder.focus();
+  await reminder.press('Space');
+  await expect(reminder).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#volume-value')).toHaveText('200%');
+  await page.locator('#microphone-switch').click();
+  await page.locator('#microphone-switch').click();
+  await expect(page.locator('#playback-dialog')).toBeVisible();
+  await expect(skipReminder).not.toBeChecked();
+  await page.locator('#playback-cancel').click();
+
+  await page.reload();
+  await page.locator('#microphone-switch').click();
+  await expect(page.locator('#playback-dialog')).toBeVisible();
+});
+
+test('blocked storage explains that the reminder choice only applies to the current page', async ({ browser, baseURL }) => {
+  for (const failure of ['access', 'read', 'write']) {
+    const context = await browser.newContext({ locale: 'en-US' });
+    await context.addInitScript((mode) => {
+      if (mode === 'access') Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Blocked', 'SecurityError'); } });
+      else {
+        if (mode === 'read') Storage.prototype.getItem = () => { throw new DOMException('Blocked', 'SecurityError'); };
+        Storage.prototype.setItem = () => { throw new DOMException('Full', 'QuotaExceededError'); };
+      }
+    }, failure);
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(baseURL);
+    await page.locator('#microphone-switch').click();
+    await page.getByRole('checkbox', { name: 'Don’t remind me in this browser' }).check();
+    await page.locator('#playback-confirm').click();
+    await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+    await expect(page.locator('#playback-preference-notice')).toContainText('Couldn’t save this setting');
+    await page.locator('#microphone-switch').click();
+    await page.locator('#microphone-switch').click();
+    await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+    await expect(page.locator('#playback-dialog')).toBeHidden();
+    await page.reload();
+    await page.locator('#microphone-switch').click();
+    await expect(page.locator('#playback-dialog')).toBeVisible();
+    await page.locator('#playback-cancel').click();
+    await page.locator('#settings-open').click();
+    await page.getByRole('switch', { name: 'Remind me before listening', exact: true }).click();
+    await expect(page.locator('#playback-reminder-notice')).toContainText('Couldn’t save this setting');
+    expect(errors).toEqual([]);
+    await context.close();
+  }
 });
 
 test('one-click mute keeps capture live, restores its gain, and reopening protects against the old boost', async ({ page }) => {
@@ -124,11 +209,20 @@ test('the reminder fits both palettes and languages on desktop, narrow phones an
         if (await page.locator('html').getAttribute('lang') !== language) await page.locator('#language').click();
         await page.locator('#microphone-switch').click();
         await expect(page.locator('#playback-dialog')).toBeVisible();
+        await expect(page.locator('#playback-dont-remind')).not.toBeChecked();
+        await expect(page.locator('#playback-dont-remind-help')).toBeInViewport({ ratio: 1 });
+        await page.locator('#playback-dont-remind').check();
         await expect(page.locator('#playback-confirm')).toBeInViewport({ ratio: 1 });
         await expect(page.locator('#playback-warning')).toBeInViewport({ ratio: 1 });
         expect(await page.locator('#playback-dialog').evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth)).toBe(true);
         await page.screenshot({ path: testInfo.outputPath(`reminder-${theme}-${width}-${language}.png`), fullPage: true });
         await page.locator('#playback-cancel').click();
+        await page.locator('#settings-open').click();
+        await expect(page.locator('#playback-reminder')).toHaveAccessibleName(language === 'en-US' ? 'Remind me before listening' : '开启监听前提醒');
+        await expect(page.locator('#playback-reminder')).toHaveAttribute('aria-checked', 'true');
+        await expect(page.locator('#playback-reminder')).toBeInViewport({ ratio: 1 });
+        await page.screenshot({ path: testInfo.outputPath(`reminder-setting-${theme}-${width}-${language}.png`), fullPage: true });
+        await page.keyboard.press('Escape');
       }
     }
   }

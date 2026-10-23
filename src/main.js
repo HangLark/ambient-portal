@@ -6,6 +6,10 @@ import { CAMERA_FORMATS, cameraRatioLabel, cameraModeLabel, loadCameraFormat, sa
 
 let storage;
 try { storage = window.localStorage; } catch { /* Storage is optional. */ }
+const playbackReminderKey = 'ambient-portal.playback-reminder';
+let playbackReminderEnabled = true;
+try { playbackReminderEnabled = storage?.getItem(playbackReminderKey) !== 'off'; } catch { /* Keep the reminder enabled. */ }
+let playbackReminderSaveFailed = false;
 let language = detectLanguage(storage, navigator.languages || [navigator.language]);
 const systemTheme = matchMedia('(prefers-color-scheme: dark)');
 let themePreference = document.documentElement.dataset.themePreference || 'system';
@@ -71,6 +75,7 @@ document.querySelector('#app').innerHTML = `
         </div>
         <p class="sound-advice" id="sound-advice">${label('outputRoute')}</p>
         <p class="sound-advice" id="playback-muted-help" hidden>${label('playbackMutedHelp')}</p>
+        <p class="notice" id="playback-preference-notice" role="status" hidden>${label('playbackReminderSaveFailed')}</p>
         <p class="notice" id="volume-reset-hint" role="status" hidden>${label('volumeResetHint')}</p>
         <p class="notice" id="volume-boost-hint" role="status" hidden>${label('volumeBoostHint')}</p>
         <p class="notice" id="mic-error" role="alert" hidden></p>
@@ -81,8 +86,11 @@ document.querySelector('#app').innerHTML = `
       <dialog id="playback-dialog" aria-labelledby="playback-title" aria-describedby="playback-intro playback-warning">
         <div class="dialog-heading">${icon('headphones')}<h2 id="playback-title">${label('playbackTitle')}</h2></div>
         <p id="playback-intro">${label('playbackIntro')}</p>
-        <div class="dialog-note playback-route">${icon('volume')}<p>${label('outputRoute')}</p></div>
         <p>${label('playbackCheck')}</p><p id="playback-warning">${label('playbackWarning')}</p>
+        <div class="reminder-choice">
+          <label class="checkbox-label"><input id="playback-dont-remind" type="checkbox" aria-describedby="playback-dont-remind-help" />${label('dontRemindPlayback')}</label>
+          <p id="playback-dont-remind-help">${label('dontRemindPlaybackHelp')}</p>
+        </div>
         <form method="dialog" class="dialog-actions">
           <button class="text-button" id="playback-cancel" type="submit" autofocus>${label('cancelPlayback')}</button>
           <button class="primary-button" id="playback-confirm" type="button">${label('confirmPlayback')}</button>
@@ -92,7 +100,13 @@ document.querySelector('#app').innerHTML = `
         <div class="dialog-heading">${icon('settings')}<h2 id="settings-title">${label('settingsTitle')}</h2></div>
         <p>${label('qualityDefault')}</p>
         ${['camera', 'microphone'].map((name) => `<section class="settings-section"><h3>${icon(name === 'camera' ? 'camera' : 'mic')}${label(name)}</h3><p class="source-name" id="${name}-source-name"></p><p class="notice" id="${name}-source-status" role="status" hidden></p><div class="source-picker" id="${name}-picker" hidden><label for="${name}-device">${label('sourceLabel')}</label><select id="${name}-device"></select></div>${name === 'camera' ? `
-          <div class="format-control"><label for="camera-format">${label('formatLabel')}</label><select id="camera-format" aria-describedby="format-help format-notice">${CAMERA_FORMATS.map(({ id, label: key }) => `<option value="${id}" data-i18n="${key}">${t(key)}</option>`).join('')}</select><p id="format-help">${label('formatHelp')}</p><p class="notice" id="format-notice" role="status" hidden></p><button class="crop-button" id="allow-crop" type="button" aria-describedby="crop-help" hidden></button><p id="crop-help" hidden>${label('formatCropHelp')}</p></div>` : '<p class="capture-detail" id="audio-detail" hidden></p>'}</section>`).join('')}
+          <div class="format-control"><label for="camera-format">${label('formatLabel')}</label><select id="camera-format" aria-describedby="format-help format-notice">${CAMERA_FORMATS.map(({ id, label: key }) => `<option value="${id}" data-i18n="${key}">${t(key)}</option>`).join('')}</select><p id="format-help">${label('formatHelp')}</p><p class="notice" id="format-notice" role="status" hidden></p><button class="crop-button" id="allow-crop" type="button" aria-describedby="crop-help" hidden></button><p id="crop-help" hidden>${label('formatCropHelp')}</p></div>` : `
+          <p class="capture-detail" id="audio-detail" hidden></p>
+          <div class="reminder-setting">
+            <button class="reminder-toggle" id="playback-reminder" type="button" role="switch" aria-checked="true" aria-describedby="playback-reminder-help">${label('playbackReminder')}<span class="switch-track" aria-hidden="true"><i></i></span></button>
+            <p id="playback-reminder-help">${label('playbackReminderHelp')}</p>
+            <p class="notice" id="playback-reminder-notice" role="status" hidden>${label('playbackReminderSaveFailed')}</p>
+          </div>`}</section>`).join('')}
         <p class="notice" id="devices-error" role="status" hidden>${label('devicesError')}</p><p class="settings-note">${label('sourceHelp')}</p>
         ${closeButton()}
       </dialog>
@@ -287,6 +301,9 @@ function render() {
   $('volume-boost-hint').hidden = media.volume <= 1 || !['active', 'paused'].includes(mic.status);
   $('resume-audio').hidden = mic.status !== 'paused';
   $('sound-advice').hidden = !micEngaged;
+  $('playback-reminder').setAttribute('aria-checked', String(playbackReminderEnabled));
+  $('playback-preference-notice').hidden = !playbackReminderSaveFailed;
+  $('playback-reminder-notice').hidden = !playbackReminderSaveFailed;
   $('mic-error').hidden = !mic.error;
   $('mic-error').textContent = mic.error ? t(mic.error) : '';
   $('camera-error').hidden = !camera.error || !audioOnly;
@@ -390,15 +407,33 @@ function startListening() {
 }
 
 function requestListening() {
-  if (playbackConfirmed) startListening();
-  else $('playback-dialog').showModal();
+  if (!playbackReminderEnabled || playbackConfirmed) startListening();
+  else {
+    $('playback-dont-remind').checked = false;
+    $('playback-dialog').showModal();
+  }
+}
+
+function setPlaybackReminder(enabled) {
+  playbackReminderEnabled = enabled;
+  if (enabled) playbackConfirmed = false;
+  playbackReminderSaveFailed = true;
+  try {
+    if (storage) {
+      storage.setItem(playbackReminderKey, enabled ? 'on' : 'off');
+      playbackReminderSaveFailed = false;
+    }
+  } catch { /* Keep the choice for this page and explain that it was not saved. */ }
+  render();
 }
 
 $('playback-confirm').addEventListener('click', () => {
   playbackConfirmed = true;
+  if ($('playback-dont-remind').checked) setPlaybackReminder(false);
   $('playback-dialog').close();
   startListening();
 });
+$('playback-reminder').addEventListener('click', () => setPlaybackReminder(!playbackReminderEnabled));
 $('microphone-switch').addEventListener('click', () => isEngaged(media.microphone) ? media.stopMicrophone() : requestListening());
 $('stop-all').addEventListener('click', () => media.stopAll());
 $('diagnostic-start').addEventListener('click', requestListening);

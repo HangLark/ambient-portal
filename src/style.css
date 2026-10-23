@@ -177,11 +177,11 @@ h1 { font-size: clamp(26px, 2.6vw, 33px); font-weight: 480; letter-spacing: -1px
 .camera-button.is-active:hover { background: var(--hover-bg); }
 .monitor-button { min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 7px; display: inline-flex; align-items: center; gap: 9px; background: transparent; color: var(--text-secondary); font-size: 13px; }
 .monitor-button:hover { background: var(--subtle-bg); }
-.switch-track { width: 29px; height: 18px; display: flex; align-items: center; padding: 2px; border-radius: 20px; background: var(--track); margin-left: 5px; }
+.switch-track { width: 29px; height: 18px; display: flex; flex-shrink: 0; align-items: center; padding: 2px; border-radius: 20px; background: var(--track); margin-left: 5px; }
 .switch-track i { width: 14px; height: 14px; border-radius: 50%; background: var(--switch-thumb); transition: transform .2s ease, background .2s ease; }
 .monitor-button[aria-checked='true'] { color: var(--accent); border-color: var(--accent-border); }
-.monitor-button[aria-checked='true'] .switch-track { background: var(--action-bg); }
-.monitor-button[aria-checked='true'] .switch-track i { transform: translateX(11px); background: var(--action-text); }
+:is(.monitor-button, .reminder-toggle)[aria-checked='true'] .switch-track { background: var(--action-bg); }
+:is(.monitor-button, .reminder-toggle)[aria-checked='true'] .switch-track i { transform: translateX(11px); background: var(--action-text); }
 .monitor-button[aria-busy='true'] .switch-track { animation: breathe 1.4s ease-in-out infinite; }
 .volume-group { max-width: 330px; padding: 0 12px; width: 100%; justify-self: center; }
 .volume-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 11px; color: var(--muted); }
@@ -232,8 +232,16 @@ dialog h3 { font-size: 13px; font-weight: 550; }
 .dialog-note p { margin-top: 0; }
 dialog form { margin-top: 23px; }
 dialog form .dialog-close { width: 100%; min-height: 44px; border: 1px solid var(--border-strong); }
-.playback-route { margin-top: 18px; }
-.playback-route p { color: var(--text-secondary); }
+.reminder-choice { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.checkbox-label { display: flex; gap: 10px; align-items: center; min-height: 40px; font-size: 12px; line-height: 1.6; color: var(--text-secondary); cursor: pointer; }
+.checkbox-label input { appearance: none; display: grid; place-content: center; flex-shrink: 0; width: 17px; height: 17px; margin: 0; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--field-bg); cursor: pointer; }
+.checkbox-label input:checked { border-color: var(--action-bg); background: var(--action-bg); }
+.checkbox-label input:checked::after { content: ''; width: 7px; height: 4px; margin-top: -2px; border-left: 2px solid var(--action-text); border-bottom: 2px solid var(--action-text); transform: rotate(-45deg); }
+.reminder-choice p { margin: 0 0 0 27px; font-size: 11px; }
+.reminder-setting { margin-top: 15px; }
+.reminder-toggle { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 40px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--text-secondary); font-size: 12px; text-align: start; }
+.reminder-toggle:hover { color: var(--text); }
+.reminder-setting p { margin-top: 0; font-size: 11px; }
 .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 .dialog-actions .text-button { min-height: 44px; padding: 0 16px; }
 .dialog-actions .primary-button { flex: 1; max-width: 290px; white-space: normal; }
