@@ -112,6 +112,14 @@ test('blocked storage explains that the reminder choice only applies to the curr
     await page.locator('#microphone-switch').click();
     await expect(page.locator('#playback-dialog')).toBeVisible();
     await page.locator('#playback-cancel').click();
+    await page.locator('#sound-help').click();
+    await page.locator('#diagnostic-start').click();
+    await page.getByRole('checkbox', { name: 'Don’t remind me in this browser' }).check();
+    await page.locator('#playback-confirm').click();
+    await expect(page.locator('#check-playback')).toHaveText('Page playback is on');
+    await expect(page.locator('#sound-playback-preference-notice')).toBeVisible();
+    await expect(page.locator('#sound-playback-preference-notice')).toContainText('Couldn’t save this setting');
+    await page.keyboard.press('Escape');
     await page.locator('#settings-open').click();
     await page.getByRole('switch', { name: 'Remind me before listening', exact: true }).click();
     await expect(page.locator('#playback-reminder-notice')).toContainText('Couldn’t save this setting');

@@ -116,7 +116,8 @@ document.querySelector('#app').innerHTML = `
           <li><h3>${label('checkInput')}</h3><p class="check-result" id="check-input" role="status"></p><p id="check-input-help"></p><button class="text-button" id="diagnostic-start" type="button" hidden>${icon('mic')}${label('startListening')}</button></li>
           <li><h3>${label('checkPlayback')}</h3><p class="check-result" id="check-playback" role="status"></p><p id="check-playback-help"></p><button class="text-button" id="diagnostic-resume" type="button" hidden>${icon('play')}${label('resumeAudio')}</button><button class="text-button" id="diagnostic-unmute" type="button" hidden>${icon('volume')}${label('restoreVolume')} ${DEFAULT_VOLUME * 100}%</button></li>
           <li><h3>${label('checkRemote')}</h3><p class="check-result">${label('remoteUnknown')}</p><p>${label('checkRemoteHelp')}</p><p>${label('checkSystemMute')}</p></li>
-        </ol><div class="dialog-note">${icon('headphones')}<p>${label('soundAdvice')}</p></div>${closeButton()}
+        </ol><div class="dialog-note">${icon('headphones')}<p>${label('soundAdvice')}</p></div>
+        <p class="notice" id="sound-playback-preference-notice" role="status" hidden>${label('playbackReminderSaveFailed')}</p>${closeButton()}
       </dialog>
     </section>
     <footer class="privacy-row"><p>${icon('shield')}${label('privacyBody')}</p><button class="text-button" id="guide-open" type="button">${label('guide')}${icon('chevron')}</button></footer>
@@ -302,8 +303,7 @@ function render() {
   $('resume-audio').hidden = mic.status !== 'paused';
   $('sound-advice').hidden = !micEngaged;
   $('playback-reminder').setAttribute('aria-checked', String(playbackReminderEnabled));
-  $('playback-preference-notice').hidden = !playbackReminderSaveFailed;
-  $('playback-reminder-notice').hidden = !playbackReminderSaveFailed;
+  for (const id of ['playback-preference-notice', 'playback-reminder-notice', 'sound-playback-preference-notice']) $(id).hidden = !playbackReminderSaveFailed;
   $('mic-error').hidden = !mic.error;
   $('mic-error').textContent = mic.error ? t(mic.error) : '';
   $('camera-error').hidden = !camera.error || !audioOnly;
