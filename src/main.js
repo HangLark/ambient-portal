@@ -60,7 +60,7 @@ document.querySelector('#app').innerHTML = `
         <div class="control-bar">
           <button class="camera-button primary-button" id="camera-button" type="button"><span id="camera-action-icon"></span><span id="camera-action"></span></button>
           <button class="monitor-button" id="microphone-switch" type="button" role="switch" aria-checked="false" aria-describedby="sound-advice">${icon('mic')}<span>${label('listen')}</span><span class="switch-track" aria-hidden="true"><i></i></span></button>
-          <div class="volume-group"><div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div><input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="volume-boost-hint" /></div>
+          <div class="volume-group"><div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div><div class="volume-slider"><button class="icon-button mute-button" id="mute-playback" type="button" aria-describedby="playback-muted-help"></button><input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="volume-boost-hint" /></div></div>
           <button class="stop-button" id="stop-all" type="button" disabled>${icon('stop')}${label('stopAll')}</button>
         </div>
         <div class="audio-status-row">
@@ -69,13 +69,25 @@ document.querySelector('#app').innerHTML = `
           <button class="text-button resume-button" id="resume-audio" type="button" hidden>${icon('play')}${label('resumeAudio')}</button>
           <button class="text-button sound-help" id="sound-help" type="button">${icon('info')}${label('soundHelp')}</button>
         </div>
-        <p class="sound-advice" id="sound-advice">${label('soundAdvice')}</p>
+        <p class="sound-advice" id="sound-advice">${label('outputRoute')}</p>
+        <p class="sound-advice" id="playback-muted-help" hidden>${label('playbackMutedHelp')}</p>
+        <p class="notice" id="volume-reset-hint" role="status" hidden>${label('volumeResetHint')}</p>
         <p class="notice" id="volume-boost-hint" role="status" hidden>${label('volumeBoostHint')}</p>
         <p class="notice" id="mic-error" role="alert" hidden></p>
         <p class="notice" id="camera-error" role="alert" hidden></p>
         <p class="notice" id="picture-notice" role="status" hidden></p>
         <p class="notice" id="fullscreen-error" role="status" hidden></p>
       </section>
+      <dialog id="playback-dialog" aria-labelledby="playback-title" aria-describedby="playback-intro playback-warning">
+        <div class="dialog-heading">${icon('headphones')}<h2 id="playback-title">${label('playbackTitle')}</h2></div>
+        <p id="playback-intro">${label('playbackIntro')}</p>
+        <div class="dialog-note playback-route">${icon('volume')}<p>${label('outputRoute')}</p></div>
+        <p>${label('playbackCheck')}</p><p id="playback-warning">${label('playbackWarning')}</p>
+        <form method="dialog" class="dialog-actions">
+          <button class="text-button" id="playback-cancel" type="submit" autofocus>${label('cancelPlayback')}</button>
+          <button class="primary-button" id="playback-confirm" type="button">${label('confirmPlayback')}</button>
+        </form>
+      </dialog>
       <dialog id="settings-dialog" aria-labelledby="settings-title">
         <div class="dialog-heading">${icon('settings')}<h2 id="settings-title">${label('settingsTitle')}</h2></div>
         <p>${label('qualityDefault')}</p>
@@ -111,6 +123,7 @@ let lastMeterTime = 0;
 let lastSignalTime = -Infinity;
 let inputDetected = false;
 let fullscreenError = false;
+let playbackConfirmed = false;
 const meters = [$('level-meter'), $('scene-meter')].map((meter) => [...meter.children]);
 
 function inputKey() {
@@ -157,7 +170,8 @@ function renderSound() {
 function renderSource(name) {
   const source = media.getSource(name);
   const device = media[name];
-  const statusKey = device.error || (device.status === 'requesting' ? 'connecting' : device.muted ? 'interrupted' : device.status === 'paused' ? 'paused' : null);
+  const statusKey = device.error || (device.status === 'requesting' ? 'connecting' : device.muted ? 'interrupted' : device.status === 'paused' ? 'paused' : null)
+    || (name === 'microphone' && media.volumeReset ? 'volumeResetHint' : null);
   $(`${name}-source-status`).hidden = !statusKey;
   $(`${name}-source-status`).textContent = statusKey ? t(statusKey) : '';
   const devices = media.devices[name];
@@ -259,6 +273,17 @@ function render() {
   $('volume').style.setProperty('--volume', `${media.volume / MAX_VOLUME * 100}%`);
   $('volume').setAttribute('aria-valuetext', `${Math.round(media.volume * 100)}%`);
   $('volume-value').classList.toggle('is-boosted', media.volume > 1);
+  const playbackMuted = media.volume === 0;
+  const muteLabel = playbackMuted ? `${t('unmutePlayback')} · ${Math.round(media.unmutedVolume * 100)}%` : t('mutePlayback');
+  $('mute-playback').disabled = $('volume').disabled;
+  $('mute-playback').dataset.muted = String(playbackMuted);
+  $('mute-playback').setAttribute('aria-label', muteLabel);
+  if (playbackMuted && micEngaged) $('mute-playback').setAttribute('aria-describedby', 'playback-muted-help');
+  else $('mute-playback').removeAttribute('aria-describedby');
+  $('mute-playback').title = muteLabel;
+  $('mute-playback').innerHTML = icon(playbackMuted ? 'volumeOff' : 'volume');
+  $('playback-muted-help').hidden = !micEngaged || !playbackMuted;
+  $('volume-reset-hint').hidden = !micEngaged || !media.volumeReset;
   $('volume-boost-hint').hidden = media.volume <= 1 || !['active', 'paused'].includes(mic.status);
   $('resume-audio').hidden = mic.status !== 'paused';
   $('sound-advice').hidden = !micEngaged;
@@ -357,12 +382,26 @@ for (const id of ['empty-start', 'add-camera']) $(id).addEventListener('click', 
 $('camera-format').addEventListener('change', (event) => { void media.setCameraFormat(event.target.value); });
 $('allow-crop').addEventListener('click', () => { $('camera-format').focus({ preventScroll: true }); void media.allowCameraCrop(); });
 for (const name of ['camera', 'microphone']) $(`${name}-device`).addEventListener('change', (event) => { void media.selectDevice(name, event.target.value); });
-$('microphone-switch').addEventListener('click', () => isEngaged(media.microphone) ? media.stopMicrophone() : media.startMicrophone());
-$('stop-all').addEventListener('click', () => media.stopAll());
-$('diagnostic-start').addEventListener('click', () => {
-  $('sound-dialog').querySelector('form button').focus({ preventScroll: true });
+function startListening() {
+  // The confirmation click retains user activation for AudioContext.resume().
+  const focusTarget = $('sound-dialog').open ? $('sound-dialog').querySelector('form button') : $('microphone-switch');
+  focusTarget.focus({ preventScroll: true });
   void media.startMicrophone();
+}
+
+function requestListening() {
+  if (playbackConfirmed) startListening();
+  else $('playback-dialog').showModal();
+}
+
+$('playback-confirm').addEventListener('click', () => {
+  playbackConfirmed = true;
+  $('playback-dialog').close();
+  startListening();
 });
+$('microphone-switch').addEventListener('click', () => isEngaged(media.microphone) ? media.stopMicrophone() : requestListening());
+$('stop-all').addEventListener('click', () => media.stopAll());
+$('diagnostic-start').addEventListener('click', requestListening);
 $('diagnostic-unmute').addEventListener('click', () => {
   $('sound-dialog').querySelector('form button').focus({ preventScroll: true });
   media.setVolume(DEFAULT_VOLUME);
@@ -374,6 +413,7 @@ for (const id of ['resume-audio', 'diagnostic-resume']) $(id).addEventListener('
   void media.resumeAudio();
 });
 $('volume').addEventListener('input', (event) => { media.setVolume(Number(event.target.value) / 100); render(); });
+$('mute-playback').addEventListener('click', () => media.togglePlaybackMute());
 $('fullscreen').addEventListener('click', async () => {
   try {
     fullscreenError = false;
@@ -386,14 +426,20 @@ document.addEventListener('fullscreenchange', render);
 video.addEventListener('resize', render);
 for (const [trigger, dialog] of [['guide-open', 'guide-dialog'], ['settings-open', 'settings-dialog'], ['sound-help', 'sound-dialog']]) {
   $(trigger).addEventListener('click', () => { if (dialog === 'settings-dialog') void media.refreshDevices(); $(dialog).showModal(); });
-  $(dialog).addEventListener('click', (event) => {
-    if (event.target !== $(dialog)) return;
-    const rect = $(dialog).getBoundingClientRect();
-    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) $(dialog).close();
+}
+for (const dialog of document.querySelectorAll('dialog')) {
+  dialog.addEventListener('click', (event) => {
+    if (event.target !== dialog) return;
+    const rect = dialog.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
   });
 }
 document.addEventListener('visibilitychange', () => { updateMeter(); renderSound(); if (!document.hidden) void media.refreshDevices(); });
-window.addEventListener('pagehide', () => media.stopAll());
+window.addEventListener('pagehide', () => {
+  playbackConfirmed = false;
+  $('playback-dialog').close();
+  media.stopAll();
+});
 if (import.meta.hot) import.meta.hot.dispose(() => {
   media.dispose(); cancelAnimationFrame(levelFrame);
   systemTheme.removeEventListener('change', followSystemTheme);

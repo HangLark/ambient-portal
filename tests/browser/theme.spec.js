@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { toggleListening } from './helpers.js';
 
 async function chooseTheme(page, value) {
   if (!(await page.locator('#theme-control').evaluate((element) => element.open))) await page.locator('#theme-button').click();
@@ -100,8 +101,8 @@ test('theme changes preserve active media, gain and camera format; fullscreen us
   await page.goto('./');
   await page.locator('#camera-button').click();
   await expect(page.locator('#preview-status-text')).toHaveText('Live');
-  await page.getByRole('switch').click();
-  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
+  await toggleListening(page);
+  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
   await page.locator('#volume').focus();
   await page.keyboard.press('End');
   await page.locator('#settings-open').click();
@@ -148,7 +149,7 @@ test('both palettes fit desktop and phone layouts, translated pickers, audio-onl
         await page.keyboard.press('Escape');
       }
     }
-    await page.getByRole('switch').click();
+    await toggleListening(page);
     await expect(page.locator('#audio-scene')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`${theme}-audio-zh-CN.png`), fullPage: true });
     for (const [button, dialog] of [['settings-open', 'settings-dialog'], ['sound-help', 'sound-dialog']]) {

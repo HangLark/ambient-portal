@@ -18,6 +18,7 @@ const paths = {
   shrink: '<path d="M3 8h5V3m8 0v5h5M8 21v-5H3m13 5v-5h5"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
   volume: '<path d="m11 4-6 5H2v6h3l6 5zM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>',
+  volumeOff: '<path d="m11 4-6 5H2v6h3l6 5zM16 9l6 6m0-6-6 6"/>',
   headphones: '<path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="3" y="12" width="4" height="8" rx="2"/><rect x="17" y="12" width="4" height="8" rx="2"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.01"/>',
   alert: '<path d="M10.3 4.9 2.2 19a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 4.9a2 2 0 0 0-3.4 0M12 10v4m0 4v.01"/>',

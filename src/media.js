@@ -61,6 +61,8 @@ export class MediaController {
     this.microphone = idleDevice();
     this.permissions = { camera: 'unknown', microphone: 'unknown' };
     this.volume = DEFAULT_VOLUME;
+    this.unmutedVolume = DEFAULT_VOLUME;
+    this.volumeReset = false;
     this.cameraRequest = 0;
     this.cameraFormat = CAMERA_FORMATS.some(({ id }) => id === cameraFormat) ? cameraFormat : 'auto';
     this.cameraFormats = null;
@@ -259,6 +261,11 @@ export class MediaController {
     if (this.disposed || isEngaged(this.microphone)) return;
     if (this.unavailable) return this.fail('microphone', this.unavailable);
     if (!this.AudioContext) return this.fail('microphone', 'errorAudioUnsupported');
+    // A new stream must not inherit a boost, including one hidden behind mute.
+    // Preserve zero so restarting can never unmute playback on the user's behalf.
+    this.volumeReset = this.volume > 1;
+    if (this.volumeReset) this.volume = DEFAULT_VOLUME;
+    if (this.unmutedVolume > 1) this.unmutedVolume = DEFAULT_VOLUME;
     const request = ++this.microphoneRequest;
     this.microphone = { status: 'requesting', error: null, muted: false };
     this.emit();
@@ -297,7 +304,8 @@ export class MediaController {
       this.analyser.fftSize = 256;
       this.samples = new Uint8Array(this.analyser.fftSize);
       this.gain = context.createGain();
-      this.gain.gain.value = this.volume;
+      this.gain.gain.value = 0;
+      this.gain.gain.setTargetAtTime(this.volume, context.currentTime, 0.03);
       this.source.connect(this.analyser);
       this.analyser.connect(this.gain);
       this.gain.connect(context.destination);
@@ -338,7 +346,21 @@ export class MediaController {
   setVolume(value) {
     if (!Number.isFinite(value)) return;
     this.volume = Math.min(MAX_VOLUME, Math.max(0, value));
-    if (this.gain) this.gain.gain.setTargetAtTime(this.volume, this.audioContext.currentTime, 0.015);
+    this.volumeReset = false;
+    if (this.volume > 0) this.unmutedVolume = this.volume;
+    if (this.gain) {
+      const gain = this.gain.gain;
+      const time = this.audioContext.currentTime;
+      gain.cancelScheduledValues(time);
+      if (this.volume === 0) gain.setValueAtTime(0, time);
+      else gain.setTargetAtTime(this.volume, time, 0.015);
+    }
+  }
+
+  togglePlaybackMute() {
+    if (!['active', 'paused'].includes(this.microphone.status)) return;
+    this.setVolume(this.volume === 0 ? this.unmutedVolume : 0);
+    this.emit();
   }
 
   getLevel() {
@@ -363,6 +385,7 @@ export class MediaController {
     this.gain = null;
     this.samples = null;
     this.microphone = idleDevice();
+    this.volumeReset = false;
     if (notify) this.emit();
   }
 

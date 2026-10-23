@@ -30,6 +30,8 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 - Sound checks suggest the next step for the current state, with actions to start listening, resume paused playback, or restore muted volume to the default 35%.
 - Microphone capture prefers the highest available sample rate, bit depth, and channel count, showing the actual specifications reported by the browser. Echo cancellation, noise suppression, and automatic gain are requested off to preserve ambient sound.
 - Low latency Web Audio monitoring, a real input level meter, and 0–200% playback volume. Monitoring starts off, with an initial playback volume of 35% when enabled.
+- A reminder to check the controlled device’s audio output before listening. No microphone request or playback occurs before confirmation.
+- One-click playback mute and restore. Reopening or switching microphones resets gain above 100% to 35%, while muted playback stays muted.
 - English and Simplified Chinese throughout, automatic browser language selection, and a saved preference.
 - Light and dark themes with automatic system appearance, responsive desktop and mobile layouts, keyboard controls, and reduced motion support.
 - Actionable states for denied permissions, missing or busy devices, interrupted signals, and paused audio.
@@ -59,9 +61,9 @@ Production preview: `http://127.0.0.1:4173/ambient-portal/`. The preview server 
 ## Use the app
 
 1. Open the page in Chrome or Edge on the **controlled device**. Click **Start camera** and allow camera access.
-2. Enable the independent microphone switch when you want sound. After permission, the microphone plays through **that device’s browser audio output**.
+2. Enable **Listen** when you want sound, then check the output reminder. Click **Checked, start listening** and allow microphone access. Sound plays through **the controlled device’s default system audio output**.
 3. If playback is paused by the browser, click **Resume audio**. Start at a low volume and adjust as needed.
-4. **Stop camera** stops video only. The microphone switch stops monitoring only. **Stop all** releases both devices.
+4. The speaker button beside the volume slider immediately mutes playback; click again to restore its level. The microphone keeps capturing, but remote forwarding receives no sound from this page. **Stop camera** stops video only; turning **Listen** off releases the microphone. **Stop all** releases both devices.
 5. Leaving or refreshing the page also stops capture. Saved browser permission never starts capture automatically on your next visit.
 
 ### Appearance
@@ -76,7 +78,15 @@ After capture starts, the app reads the track’s `getCapabilities()` and uses `
 
 Capability ranges do not guarantee every combination is available. The interface therefore displays actual `getSettings()` values and omits unreported fields. The browser and audio output device may resample audio or mix channels, and remote desktop software may compress both video and audio. Maximum capture specifications do not guarantee lossless reception on the remote device.
 
-Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perceived loudness. Above 100%, the interface highlights distortion and feedback risks. Strong signals may clip, so lower volume if needed. Capture quality and playback volume are independent: the default 35% playback level does not reduce capture quality.
+Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perceived loudness. This is not system volume. Above 100%, the interface highlights distortion and feedback risks. Strong signals may clip, so lower volume if needed. Capture quality and playback volume are independent: the default 35% playback level does not reduce capture quality.
+
+### Output checks and playback mute
+
+The first start after opening or refreshing the page asks you to check system mute, headphones, or another output on the controlled device. Cancel, Escape, or clicking outside the dialog leaves the microphone off. Confirmation lasts only for the current page and is not stored. Starting from **Can’t hear anything?** follows the same flow. The page cannot reliably read system mute; confirmation records your check, not an automatic mute detection.
+
+- **Temporary mute:** the speaker button stops playback immediately while the camera, microphone, and input meter continue. Click again to restore the last nonzero level, including 200% within the same listening session. It also restores playback after moving the slider to 0%. Sound checks retain a separate action to restore the default 35%.
+- **Reopening:** a previous level above 100% resets to 35% with a visible explanation; levels up to 100% are retained. If playback was muted when stopped, it stays muted and cannot restore an old boost later. Switching microphones follows the same rule.
+- **Playback location:** the page identifies **controlled device · system default**. Muting this page also silences its feed to remote software; it cannot mute the controlled device while keeping remote playback audible. Use headphones or output routing supported by your remote app. System mute may also silence forwarded sound.
 
 ### Aspect ratios
 
@@ -94,13 +104,13 @@ Capability ranges cannot enumerate all native format combinations, so quality pr
 
 Open **Devices** above the preview for actual input names and audio specifications. An input picker appears only when the browser exposes multiple authorized sources. Reading the device list does not request capture permission. Connecting or disconnecting devices, and reopening settings, refreshes the list.
 
-- Switching a camera restarts only video; switching a microphone restarts only audio. The other channel continues, the new input negotiates maximum quality, and playback volume is preserved.
+- Switching a camera restarts only video; switching a microphone restarts only audio. The other channel continues and the new input negotiates maximum quality. A microphone switch applies the gain protection described above and preserves mute.
 - An unavailable selected input produces an explicit error instead of silently substituting another device. Choose an available source in settings and start again; missing selections remain identifiable. Selecting while stopped never starts capture.
 - Source choices last for this page session and are not saved in `localStorage`. Browser-provided labels may not include the full hardware model.
 - With only the microphone on, the main view shows listening status, actual source, and input level. At 0% playback volume, capture and the input meter continue; switch monitoring off to release the microphone.
 - The audio-only view also identifies startup, muted playback, and interrupted input. At 0%, **Can’t hear anything?** can restore volume to 35% without restarting capture. Every action in sound checks requires an explicit click.
 - **No clear sound detected yet** means no substantial input is currently detected, not a device failure. Interrupted input, paused browser playback, and zero playback volume have distinct states. A suspended audio context does not pretend to measure input levels.
-- **Can’t hear anything?** reports the input and playback states observable by this page. **Playing on this device** does not confirm an audible system output or remote reception. Check system volume, output routing, and remote software forwarding separately.
+- **Can’t hear anything?** reports the input and playback states observable by this page. **Playing on the controlled device** does not confirm an audible system output or remote reception. Check system volume, output routing, and remote software forwarding separately.
 
 ### Remote desktop audio
 

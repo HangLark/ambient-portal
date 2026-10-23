@@ -52,7 +52,12 @@ class AudioContext {
   }
   createGain() {
     const node = new AudioNode();
-    node.gain = { value: 1, setTargetAtTime: (value) => { node.gain.value = value; } };
+    node.gain = {
+      value: 1,
+      cancelScheduledValues() {},
+      setValueAtTime: (value) => { node.gain.value = value; },
+      setTargetAtTime: (value) => { node.gain.value = value; },
+    };
     return node;
   }
 }
@@ -184,6 +189,53 @@ test('microphone cancellation closes audio immediately and stops a late stream',
   await starting;
   assert.equal(late.track.readyState, 'ended');
   assert.equal(controller.microphone.status, 'idle');
+});
+
+test('playback mute restores the last audible level without restarting or stopping capture', async () => {
+  const { controller, captured } = setup();
+  await controller.startCamera();
+  await controller.startMicrophone();
+  const context = controller.audioContext;
+  controller.setVolume(2);
+  controller.togglePlaybackMute();
+  assert.equal(controller.volume, 0);
+  assert.equal(controller.gain.gain.value, 0);
+  assert.equal(controller.microphone.status, 'active');
+  assert.ok(captured.every(({ stream }) => stream.track.readyState === 'live'));
+  controller.togglePlaybackMute();
+  assert.equal(controller.volume, 2);
+  assert.equal(controller.gain.gain.value, 2);
+  controller.setVolume(0.65);
+  controller.setVolume(0);
+  controller.togglePlaybackMute();
+  assert.equal(controller.volume, 0.65);
+  assert.equal(controller.audioContext, context);
+  assert.equal(captured.length, 2);
+  controller.dispose();
+});
+
+test('reopening a microphone resets boosted playback and cannot restore a previous session’s boost', async () => {
+  const { controller } = setup();
+  await controller.startMicrophone();
+  controller.setVolume(2);
+  controller.stopMicrophone();
+  await controller.startMicrophone();
+  assert.equal(controller.volume, 0.35);
+  assert.equal(controller.gain.gain.value, 0.35);
+  assert.equal(controller.volumeReset, true);
+  controller.setVolume(0.7);
+  assert.equal(controller.volumeReset, false);
+  controller.stopMicrophone();
+  await controller.startMicrophone();
+  assert.equal(controller.volume, 0.7);
+  controller.setVolume(2);
+  controller.togglePlaybackMute();
+  controller.stopAll();
+  await controller.startMicrophone();
+  assert.equal(controller.volume, 0);
+  controller.togglePlaybackMute();
+  assert.equal(controller.volume, 0.35);
+  controller.dispose();
 });
 
 test('permission rejection closes the pending audio context', async () => {
@@ -419,7 +471,7 @@ for (const kind of ['video', 'audio']) {
   });
 }
 
-test('playback gain reaches 200%, is bounded, and survives an in-session microphone restart', async () => {
+test('playback gain reaches 200%, stays bounded, and resets on microphone restart', async () => {
   const { controller } = setup();
   await controller.startMicrophone();
   assert.equal(controller.gain.gain.value, 0.35);
@@ -432,7 +484,7 @@ test('playback gain reaches 200%, is bounded, and survives an in-session microph
   assert.equal(controller.volume, 2);
   controller.stopMicrophone();
   await controller.startMicrophone();
-  assert.equal(controller.gain.gain.value, 2);
+  assert.equal(controller.gain.gain.value, 0.35);
   controller.setVolume(-1);
   assert.equal(controller.gain.gain.value, 0);
   controller.dispose();
@@ -576,7 +628,7 @@ test('camera source selection restarts only video, negotiates native highest qua
   controller.dispose();
 });
 
-test('microphone switching preserves volume and video while reacquiring maximum unprocessed audio', async () => {
+test('microphone switching resets boosted playback while preserving video and maximum unprocessed audio', async () => {
   const { controller } = setup();
   await controller.startCamera();
   await controller.startMicrophone();
@@ -596,7 +648,8 @@ test('microphone switching preserves volume and video while reacquiring maximum 
   assert.equal(oldContext.state, 'closed');
   assert.equal(controller.cameraStream, video);
   assert.equal(video.track.readyState, 'live');
-  assert.equal(controller.gain.gain.value, 2);
+  assert.equal(controller.gain.gain.value, 0.35);
+  assert.equal(controller.volumeReset, true);
   assert.deepEqual(changes[0], { echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: { ideal: 0 }, sampleRate: { ideal: 96000 }, sampleSize: { ideal: 24 }, channelCount: { ideal: 2 } });
   controller.dispose();
 });

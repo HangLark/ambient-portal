@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { toggleListening } from './helpers.js';
 
 // Real Chrome streams with a deterministic device catalog; no physical hardware is opened.
 async function installDevices(page) {
@@ -51,8 +52,8 @@ test('start is above the fold; desktop, mobile and fullscreen keep the complete 
   await page.locator('#empty-start').click();
   await expect(page.locator('#preview-status-text')).toHaveText('Live');
   await expect(page.locator('#camera-button')).toBeFocused();
-  await page.getByRole('switch').click();
-  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
+  await toggleListening(page);
+  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
   await page.locator('#fullscreen').click();
   expect(await page.evaluate(() => document.fullscreenElement.id)).toBe('workspace');
   for (const selector of ['#camera-button', '#microphone-switch', '#stop-all', '#volume', '#settings-open']) await expectReachable(page, selector);
@@ -69,7 +70,7 @@ test('start is above the fold; desktop, mobile and fullscreen keep the complete 
     await page.setViewportSize({ width, height });
     await page.evaluate(() => window.scrollTo(0, 0));
     await expectReachable(page, '#empty-start');
-    await page.getByRole('switch').click();
+    await toggleListening(page);
     await expect(page.locator('#audio-scene')).toBeVisible();
     for (const selector of ['#camera-button', '#microphone-switch', '#stop-all', '#volume']) await expectReachable(page, selector);
     await page.screenshot({ path: testInfo.outputPath(`audio-${width}.png`), fullPage: true });
@@ -89,7 +90,7 @@ test('sound checks distinguish quiet input, signal, zero gain, interruption and 
     };
   });
   await page.goto('./');
-  await page.getByRole('switch').click();
+  await toggleListening(page);
   await expect(page.locator('#audio-scene')).toBeVisible();
   await expect(page.locator('#audio-source')).toHaveText('Studio mic-a');
   await expect(page.locator('#scene-caption')).toHaveText('No clear sound detected yet');
@@ -143,8 +144,8 @@ test('permission-aware input pickers switch only the selected channel and expose
   expect(await page.evaluate(() => window.__captures.length)).toBe(0);
   await page.keyboard.press('Escape');
   await page.locator('#camera-button').click();
-  await page.getByRole('switch').click();
-  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
+  await toggleListening(page);
+  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
   await page.locator('#settings-open').click();
   await expect(page.locator('#camera-source-name')).toHaveText('Studio camera-a');
   await expect(page.locator('#microphone-source-name')).toHaveText('Studio mic-a');
@@ -154,9 +155,14 @@ test('permission-aware input pickers switch only the selected channel and expose
   expect(await page.evaluate(() => window.__captures.map(({ kind, id, track }) => [kind, id, track.readyState]))).toEqual([
     ['video', 'camera-a', 'ended'], ['audio', 'mic-a', 'live'], ['video', 'camera-b', 'live'],
   ]);
+  await page.keyboard.press('Escape');
+  await page.locator('#volume').press('End');
+  await page.locator('#settings-open').click();
   await page.locator('#microphone-device').selectOption('mic-b');
   await expect(page.locator('#microphone-source-name')).toHaveText('Studio mic-b');
-  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
+  await expect(page.locator('#volume-value')).toHaveText('35%');
+  await expect(page.locator('#microphone-source-status')).toContainText('previous gain exceeded 100%');
   expect(await page.evaluate(() => window.__captures[2].track.readyState)).toBe('live');
   expect(await page.evaluate(() => window.__captures[3].constraints.audio.deviceId)).toEqual({ exact: 'mic-b' });
   await page.screenshot({ path: testInfo.outputPath('device-settings.png') });
@@ -172,7 +178,7 @@ test('permission-aware input pickers switch only the selected channel and expose
   await page.keyboard.press('Escape');
   await page.locator('#camera-button').click();
   await expect(page.locator('#camera-error')).toContainText('selected device is unavailable');
-  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
   await page.locator('#settings-open').click();
   await page.locator('#camera-device').selectOption('camera-a');
   await page.keyboard.press('Escape');
@@ -191,8 +197,8 @@ test('source failures are visible inside settings without stopping the other inp
   await installDevices(page);
   await page.goto('./');
   await page.locator('#camera-button').click();
-  await page.getByRole('switch').click();
-  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
+  await toggleListening(page);
+  await expect(page.locator('#playback-status')).toHaveText('Playing on the controlled device');
   await page.locator('#settings-open').click();
   await page.evaluate(() => { window.__rejectSource = 'camera-b'; });
   await page.locator('#camera-device').selectOption('camera-b');
@@ -238,7 +244,9 @@ test('sound checks start listening and restore muted playback without restarting
     await expect(page.locator('#diagnostic-start')).toBeVisible();
     expect(await page.evaluate(() => window.__captures.map(({ kind }) => kind))).toEqual(['video']);
     await page.locator('#diagnostic-start').click();
-    await expect(page.locator('#check-playback')).toHaveText(language === 'en-US' ? 'Playing on this device' : '正在此设备回放');
+    await expect(page.locator('#playback-dialog')).toBeVisible();
+    await page.locator('#playback-confirm').click();
+    await expect(page.locator('#check-playback')).toHaveText(language === 'en-US' ? 'Playing on the controlled device' : '正在被控设备回放');
     await expect(page.locator('#diagnostic-start')).toBeHidden();
     await expect(page.locator('#sound-dialog form button')).toBeFocused();
     expect(await page.evaluate(() => window.__captures[0].track.readyState)).toBe('live');
@@ -277,7 +285,7 @@ test('audio-only startup shows permission guidance and cancellation releases a l
   });
   await page.setViewportSize({ width: 320, height: 760 });
   await page.goto('./');
-  await page.getByRole('switch').click();
+  await toggleListening(page);
   for (const language of ['en-US', 'zh-CN']) {
     if (await page.locator('html').getAttribute('lang') !== language) await page.locator('#language').click();
     await expect(page.locator('#audio-scene')).toBeVisible();
@@ -288,7 +296,7 @@ test('audio-only startup shows permission guidance and cancellation releases a l
     await expectReachable(page, '#microphone-switch');
     await page.screenshot({ path: testInfo.outputPath(`microphone-pending-${language}.png`), fullPage: true });
   }
-  await page.getByRole('switch').click();
+  await toggleListening(page);
   await expect(page.locator('#empty-state')).toBeVisible();
   await page.evaluate(() => window.__allowMicrophone());
   await expect.poll(() => page.evaluate(() => window.__captures.length)).toBe(1);
