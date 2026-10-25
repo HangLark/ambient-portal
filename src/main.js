@@ -30,7 +30,10 @@ const closeButton = () => `<form method="dialog"><button class="text-button dial
 document.querySelector('#app').innerHTML = `
   <a class="skip-link" href="#controls">${label('skip')}</a>
   <header class="site-header"><div class="header-inner">
-    <a class="brand" id="brand" href="#heading" aria-label="${t('brandName')}">${icon('portal', 'brand-symbol')}${label('brandName')}</a>
+    <div class="header-identity">
+      <h1 class="brand-heading" id="heading"><a class="brand" id="brand" href="#heading" aria-label="${t('brandName')}">${icon('portal', 'brand-symbol')}${label('brandName')}</a></h1>
+      <p class="header-description">${label('intro')}</p>
+    </div>
     <div class="header-actions">
       <details class="theme-control" id="theme-control">
         <summary class="theme-button" id="theme-button"></summary>
@@ -42,7 +45,6 @@ document.querySelector('#app').innerHTML = `
     </div>
   </div></header>
   <main class="main-content">
-    <section class="intro" aria-labelledby="heading"><h1 id="heading">${label('heading')}</h1><p class="intro-description">${label('intro')}</p></section>
     <div class="environment-error" id="environment-error" role="alert" hidden>${icon('alert')}<p></p></div>
     <section class="workspace" id="workspace" aria-labelledby="preview-title">
       <div class="panel-toolbar">

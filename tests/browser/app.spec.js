@@ -27,7 +27,7 @@ test('production assets load under the Pages subpath with only the declared anal
   page.on('request', (request) => requests.push(request.url()));
   page.on('response', (response) => { if (response.status() >= 400 && !isAnalyticsRequest(response.url())) failures.push(response.url()); });
   await page.goto('./');
-  await expect(page.getByRole('heading', { name: 'Be there, from anywhere.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Ambient Portal' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Stop all' })).toBeDisabled();
   await expect(page.locator('#empty-state')).toBeVisible();
   expect(await page.locator('video').evaluate((video) => video.srcObject)).toBeNull();
