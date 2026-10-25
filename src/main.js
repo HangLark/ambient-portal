@@ -164,9 +164,13 @@ function renderSound() {
   const input = inputKey();
   const playback = playbackKey();
   $('mic-status').textContent = t(mic.error ? 'error' : input);
+  $('mic-status').dataset.state = mic.error ? 'error' : input;
   $('playback-status').textContent = ['active', 'paused'].includes(mic.status) ? t(playback) : '';
+  $('playback-status').dataset.state = playback;
   $('check-input').textContent = t(input);
+  $('check-input').dataset.state = mic.error ? 'error' : input;
   $('check-playback').textContent = t(playback);
+  $('check-playback').dataset.state = playback;
   const inputHelp = mic.error ? 'checkInputError' : mic.status === 'requesting' ? 'micPendingBody'
     : !isEngaged(mic) ? 'checkInputStart' : mic.muted ? 'checkInputInterrupted'
       : mic.status === 'paused' ? 'checkInputPaused' : 'checkInputHelp';
@@ -178,6 +182,7 @@ function renderSound() {
   const sceneTitle = mic.status === 'requesting' ? 'micPendingTitle' : mic.muted ? 'inputInterrupted'
     : mic.status === 'paused' ? 'paused' : media.volume === 0 ? 'playbackMutedTitle' : 'listeningTitle';
   $('audio-scene-title').textContent = t(sceneTitle);
+  $('audio-scene').dataset.state = mic.muted ? 'inputInterrupted' : playback;
   $('scene-caption').textContent = t(mic.status === 'requesting' ? 'micPendingBody' : input);
   $('scene-meter').hidden = mic.status === 'requesting';
 }
@@ -189,6 +194,7 @@ function renderSource(name) {
     || (name === 'microphone' && media.volumeReset ? 'volumeResetHint' : null);
   $(`${name}-source-status`).hidden = !statusKey;
   $(`${name}-source-status`).textContent = statusKey ? t(statusKey) : '';
+  $(`${name}-source-status`).dataset.state = device.error ? 'error' : device.status;
   const devices = media.devices[name];
   $(`${name}-source-name`).textContent = source.label || t(isEngaged(device) && device.status !== 'requesting' ? 'sourceUnnamed' : 'sourcePending');
   const picker = $(`${name}-device`);

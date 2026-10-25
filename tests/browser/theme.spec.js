@@ -10,7 +10,7 @@ async function chooseTheme(page, value) {
 async function expectTheme(page, theme) {
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
   expect(await page.locator('html').evaluate((element) => getComputedStyle(element).colorScheme)).toBe(theme);
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', theme === 'light' ? '#f7f7f9' : '#101113');
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', theme === 'light' ? '#f5f6f7' : '#111315');
 }
 
 test('appearance follows system changes until overridden, persists on reload, and can return to system', async ({ page }) => {
@@ -54,7 +54,7 @@ test('saved light appearance is painted even before the application bundle arriv
   await page.goto('./');
   await expectTheme(page, 'light');
   await expect(page.locator('#app')).toBeEmpty();
-  expect(await page.locator('html').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(247, 247, 249)');
+  expect(await page.locator('html').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(245, 246, 247)');
   await page.unroute('**/assets/*.js');
   await page.reload();
   await expect(page.locator('#theme-button')).toHaveAccessibleName('Appearance: Light');
@@ -122,7 +122,7 @@ test('theme changes preserve active media, gain and camera format; fullscreen us
     await expect(page.locator('#volume-value')).toHaveText('200%');
     await page.locator('#fullscreen').click();
     expect(await page.evaluate(() => document.fullscreenElement.id)).toBe('workspace');
-    expect(await page.locator('#workspace').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(21, 22, 25)');
+    expect(await page.locator('#workspace').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(26, 29, 32)');
     expect(await page.locator('video').evaluate((video) => getComputedStyle(video).filter)).toBe('none');
     expect(await page.locator('video').evaluate((video) => getComputedStyle(video).backgroundColor)).toBe('rgb(9, 10, 11)');
     await page.locator('#fullscreen').click();
@@ -155,7 +155,7 @@ test('both palettes fit desktop and phone layouts, translated pickers, audio-onl
     for (const [button, dialog] of [['settings-open', 'settings-dialog'], ['sound-help', 'sound-dialog']]) {
       await page.locator(`#${button}`).click();
       await expect(page.locator(`#${dialog}`)).toBeVisible();
-      expect(await page.locator(`#${dialog}`).evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(26, 26, 31)');
+      expect(await page.locator(`#${dialog}`).evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(35, 39, 44)');
       await page.screenshot({ path: testInfo.outputPath(`${theme}-${dialog}-zh-CN.png`), fullPage: true });
       await page.keyboard.press('Escape');
     }

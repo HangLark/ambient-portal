@@ -33,7 +33,7 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 - A reminder to check the controlled device’s audio output before the first listen. Choose not to be reminded in this browser, or turn reminders back on in Device settings.
 - One-click playback mute and restore. Reopening or switching microphones resets gain above 100% to 35%, while muted playback stays muted.
 - English and Simplified Chinese throughout, automatic browser language selection, and a saved preference.
-- Light and dark themes with automatic system appearance, responsive desktop and mobile layouts, keyboard controls, and reduced motion support.
+- Graphite gray and mist blue palettes for light, dark, and system appearance. Running, muted, and error states use both color and text. Responsive desktop and mobile layouts, keyboard controls, and reduced motion support.
 - Actionable states for denied permissions, missing or busy devices, interrupted signals, and paused audio.
 - Cancel pending requests safely: if permission arrives after cancellation, its stream is immediately released.
 
