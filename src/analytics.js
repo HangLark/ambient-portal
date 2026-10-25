@@ -1,5 +1,5 @@
 // Keep development, previews and forks out of the official site's analytics.
-export const analyticsEnabled = import.meta.env.PROD
+const analyticsEnabled = import.meta.env.PROD
   && location.hostname === 'hanglark.github.io'
   && /^\/ambient-portal(?:\/|$)/.test(location.pathname);
 

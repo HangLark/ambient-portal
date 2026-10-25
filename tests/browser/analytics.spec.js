@@ -13,7 +13,7 @@ async function mirrorBuild(page, baseURL, target) {
   });
 }
 
-test('the official site loads one asynchronous beacon and discloses analytics in both languages', async ({ page, baseURL }) => {
+test('the official site loads one asynchronous beacon without adding interface copy', async ({ page, baseURL }) => {
   await mirrorBuild(page, baseURL, site);
   let loads = 0;
   await page.route(beacon, async (route) => {
@@ -35,10 +35,10 @@ test('the official site loads one asynchronous beacon and discloses analytics in
 
   for (const language of ['en-US', 'zh-CN']) {
     if (language === 'zh-CN') await page.locator('#language').click();
-    await expect(page.locator('[data-i18n="analyticsNotice"]')).toHaveText(language === 'en-US'
-      ? 'Visits measured with Cloudflare.' : '访问统计由 Cloudflare 提供。');
+    await expect(page.locator('.privacy-row')).not.toContainText(/Cloudflare/);
     await page.locator('#guide-open').click();
-    await expect(page.locator('[data-i18n="analyticsDetails"]')).toBeVisible();
+    await expect(page.locator('#guide-dialog')).toBeVisible();
+    await expect(page.locator('#guide-dialog')).not.toContainText(/Cloudflare/);
     await page.keyboard.press('Escape');
     for (const colorScheme of ['light', 'dark']) for (const width of [1440, 390, 320]) {
       await page.emulateMedia({ colorScheme });
@@ -102,7 +102,6 @@ test('local previews, forks and other projects do not load the official analytic
     await page.goto(target);
     await expect(page.locator('#start-all')).toBeVisible();
     await expect(page.locator('script[data-cf-beacon]')).toHaveCount(0);
-    await expect(page.locator('[data-i18n="analyticsNotice"]')).toHaveCount(0);
   }
   expect(loads).toBe(0);
 });

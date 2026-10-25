@@ -17,7 +17,7 @@
 
 **遥·窗（Ambient Portal）** 是一个轻量的网页工具，让你通过远程桌面看见现场、听见环境。在被控设备上打开网页，通过摄像头查看周围画面，通过麦克风监听环境声音；屏幕与系统声音的远程转发由 UU 远程等远程控制软件负责。
 
-Vite + 原生 JavaScript + 浏览器 Web API。核心功能无后端、账号、数据库或运行时 npm 依赖，不录制、不保存、不上传音视频。仅在当前浏览器 `localStorage` 中保存语言、外观、背景动效、画面比例和播放前提醒偏好。正式站点另使用 Cloudflare Web Analytics 统计页面访问及基础性能信息。
+Vite + 原生 JavaScript + 浏览器 Web API。核心功能无后端、账号、数据库或运行时 npm 依赖，不录制、不保存、不上传音视频。仅在当前浏览器 `localStorage` 中保存语言、外观、背景动效、画面比例和播放前提醒偏好。
 
 ## 功能
 
@@ -190,9 +190,9 @@ git push -u origin main
 
 本地的生产构建和合成设备浏览器测试不能代替你所在仓库实际的 Actions 运行、实体设备权限，以及远程软件音频链路检查。
 
-## 访问统计与隐私
+## 访问统计配置
 
-正式站点 `https://hanglark.github.io/ambient-portal/` 使用 Cloudflare Web Analytics，统计页面浏览量及基础访问、加载性能信息。摄像头画面和麦克风声音仍在本地处理，不包含在统计数据中。页面底部和使用指南提供中英文说明。
+正式站点 `https://hanglark.github.io/ambient-portal/` 使用 Cloudflare Web Analytics，统计页面浏览量及基础访问、加载性能信息。摄像头画面和麦克风声音仍在本地处理，不包含在统计数据中。
 
 - `src/analytics.js` 仅在生产构建、指定主机名与项目路径下加载统计脚本。本地开发、localhost 生产预览、其他域名的部署及 Fork 默认不上报到本项目。
 - 使用用户提供的站点 token 加载官方模块脚本，独立异步执行。统计脚本加载缓慢或被拦截时，不影响摄像头和麦克风功能。
@@ -235,7 +235,7 @@ Windows PowerShell 对应设置：`$env:PLAYWRIGHT_CHROMIUM="1"`，然后运行 
 
 播放前提醒测试覆盖默认提醒、勾选后取消不保存、跨刷新记住选择、设备设置中恢复提醒、声音排查入口与存储读写受限时的反馈，并检查双语、明暗主题、窄屏和全屏中的布局。
 
-统计测试通过镜像生产域名、拦截第三方脚本来验证加载范围、单次加载、双语说明，以及脚本缓慢或被阻断时的媒体功能，不会发送测试访问。对正式 HTTPS 网站运行完整回归时，真实加载页面可能计入访问量。
+统计测试通过镜像生产域名、拦截第三方脚本来验证加载范围、单次加载，以及脚本缓慢或被阻断时的媒体功能，不会发送测试访问。对正式 HTTPS 网站运行完整回归时，真实加载页面可能计入访问量。
 
 ## 代码结构
 
@@ -253,7 +253,7 @@ tests/             生命周期与浏览器测试
 .github/workflows/deploy.yml
 ```
 
-无媒体持久化、媒体传输 API 或第三方字体。画面直接绑定到静音 `<video>`；麦克风走 `MediaStream → AnalyserNode → GainNode → AudioContext.destination`，无需编码、录制或网络往返。网页静态资源由部署平台提供；正式站点另加载上文说明的 Cloudflare 统计脚本。
+无媒体持久化、媒体传输 API 或第三方字体。画面直接绑定到静音 `<video>`；麦克风走 `MediaStream → AnalyserNode → GainNode → AudioContext.destination`，无需编码、录制或网络往返。网页静态资源由部署平台提供。
 
 部署与浏览器行为参考：[Vite 静态部署](https://vite.dev/guide/static-deploy.html#github-pages)、[GitHub Pages 自定义工作流](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)、[MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)、[MDN AudioContext](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext)。
 
