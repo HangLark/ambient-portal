@@ -3,6 +3,7 @@ import { icon } from './icons.js';
 import { detectLanguage, saveLanguage, translate } from './i18n.js';
 import { MediaController, isEngaged, DEFAULT_VOLUME, MAX_VOLUME } from './media.js';
 import { CAMERA_FORMATS, cameraRatioLabel, cameraModeLabel, loadCameraFormat, saveCameraFormat } from './camera-format.js';
+import { initAmbientBackground } from './ambient-background.js';
 
 let storage;
 try { storage = window.localStorage; } catch { /* Storage is optional. */ }
@@ -52,16 +53,10 @@ document.querySelector('#app').innerHTML = `
       <div class="stage" id="stage" data-state="idle">
         <video id="preview-video" autoplay playsinline muted></video>
         <div class="standby-art" id="standby-art" aria-hidden="true">
-          <svg class="window-shadow" viewBox="0 0 480 700" preserveAspectRatio="none">
-            <g class="window-panes-desktop">
-              <path class="window-pane" d="M-140-80H110L260 230H10Z" />
-              <path class="window-pane window-pane-soft" d="M28 266H278L462 650H212Z" />
-            </g>
-            <g class="window-panes-mobile">
-              <path class="window-pane" d="M-80-60H112L184 34H-8Z" />
-              <path class="window-pane window-pane-soft" d="M-260 550H-150L180 800H20Z" />
-            </g>
-          </svg>
+          <span class="ambient-color ambient-blue"></span>
+          <span class="ambient-color ambient-lilac"></span>
+          <span class="ambient-color ambient-sage"></span>
+          <span class="ambient-color ambient-peach"></span>
         </div>
         <div class="empty-state" id="empty-state">
           <div class="preview-placeholder" id="preview-placeholder" aria-hidden="true">${icon('camera')}</div>
@@ -165,6 +160,7 @@ document.querySelector('#app').innerHTML = `
 `;
 
 const $ = (id) => document.getElementById(id);
+const disposeAmbientBackground = initAmbientBackground($('standby-art'));
 const video = $('preview-video');
 let savedCameraFormat = loadCameraFormat(storage);
 const media = new MediaController({ video, cameraFormat: savedCameraFormat, onChange: render });
@@ -588,6 +584,7 @@ window.addEventListener('pagehide', () => {
   media.stopAll();
 });
 if (import.meta.hot) import.meta.hot.dispose(() => {
+  disposeAmbientBackground();
   media.dispose(); cancelAnimationFrame(levelFrame);
   stageObserver.disconnect();
   reducedMotion.removeEventListener('change', renderBackgroundMotion);
