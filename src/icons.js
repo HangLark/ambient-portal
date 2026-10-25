@@ -25,6 +25,7 @@ const paths = {
   check: '<path d="m5 12 4 4L19 6"/>',
   x: '<path d="m6 6 12 12M6 18 18 6"/>',
   play: '<path d="m8 4 12 8-12 8z"/>',
+  pause: '<path d="M9 5v14M15 5v14"/>',
 };
 
 export function icon(name, className = '') {

@@ -12,6 +12,11 @@ try { playbackReminderEnabled = storage?.getItem(playbackReminderKey) !== 'off';
 let playbackReminderSaveFailed = false;
 let language = detectLanguage(storage, navigator.languages || [navigator.language]);
 const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const backgroundMotionKey = 'ambient-portal.background-motion';
+let backgroundPaused = false;
+try { backgroundPaused = storage?.getItem(backgroundMotionKey) === 'off'; } catch { /* Use the system motion preference. */ }
+let stageVisible = true;
 let themePreference = document.documentElement.dataset.themePreference || 'system';
 const themeOptions = [['system', 'themeSystem', 'monitor'], ['light', 'themeLight', 'sun'], ['dark', 'themeDark', 'moon']];
 const t = (key) => translate(language, key);
@@ -45,6 +50,11 @@ document.querySelector('#app').innerHTML = `
       </div>
       <div class="stage" id="stage" data-state="idle">
         <video id="preview-video" autoplay playsinline muted></video>
+        <div class="standby-art" id="standby-art" aria-hidden="true">
+          <svg class="standby-window standby-window-far" viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"><path d="M140 780V355C140 86 346-88 600-88s460 174 460 443v425" /></svg>
+          <svg class="standby-window standby-window-middle" viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"><path d="M240 780V355C240 142 401 10 600 10s360 132 360 345v425" /></svg>
+          <svg class="standby-window standby-window-near" viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"><path d="M340 780V355C340 203 456 108 600 108s260 95 260 247v425" /></svg>
+        </div>
         <div class="empty-state" id="empty-state">
           <div class="preview-placeholder" id="preview-placeholder" aria-hidden="true">${icon('camera')}</div>
           <h3 id="empty-title"></h3><p id="empty-body"></p>
@@ -64,6 +74,7 @@ document.querySelector('#app').innerHTML = `
           <p class="scene-caption" id="scene-caption"></p>
           <button class="text-button" id="add-camera" type="button">${icon('camera')}${label('addCamera')}</button>
         </div>
+        <button class="icon-button background-motion" id="background-motion" type="button"></button>
       </div>
       <div class="preview-footer"><span id="preview-detail"></span><span id="camera-source"></span></div>
       <section class="control-panel" id="controls" aria-label="${t('controls')}" tabindex="-1">
@@ -148,6 +159,17 @@ let playbackConfirmed = false;
 let pendingStart = null;
 const meters = [$('level-meter'), $('scene-meter')].map((meter) => [...meter.children]);
 
+function renderBackgroundMotion() {
+  const standby = !media.engaged && !media.camera.error && !media.microphone.error && !media.unavailable;
+  $('standby-art').hidden = !standby;
+  $('standby-art').dataset.paused = String(backgroundPaused || document.hidden || !stageVisible);
+  $('background-motion').hidden = !standby || reducedMotion.matches;
+  $('background-motion').innerHTML = icon(backgroundPaused ? 'play' : 'pause');
+  const name = t(backgroundPaused ? 'resumeBackground' : 'pauseBackground');
+  $('background-motion').setAttribute('aria-label', name);
+  $('background-motion').title = name;
+}
+
 function inputKey() {
   const mic = media.microphone;
   if (mic.status === 'error') return mic.error;
@@ -226,6 +248,7 @@ function renderSource(name) {
 }
 
 function render() {
+  renderBackgroundMotion();
   const camera = media.camera;
   const mic = media.microphone;
   const format = media.cameraFormatState;
@@ -467,6 +490,17 @@ $('playback-dialog').addEventListener('close', () => {
 $('playback-reminder').addEventListener('click', () => setPlaybackReminder(!playbackReminderEnabled));
 $('microphone-switch').addEventListener('click', () => isEngaged(media.microphone) ? media.stopMicrophone() : requestListening());
 $('start-all').addEventListener('click', () => requestListening('both'));
+$('background-motion').addEventListener('click', () => {
+  backgroundPaused = !backgroundPaused;
+  try { storage?.setItem(backgroundMotionKey, backgroundPaused ? 'off' : 'on'); } catch { /* Session-only preference. */ }
+  renderBackgroundMotion();
+});
+reducedMotion.addEventListener('change', renderBackgroundMotion);
+const stageObserver = new IntersectionObserver(([entry]) => {
+  stageVisible = entry.isIntersecting;
+  renderBackgroundMotion();
+});
+stageObserver.observe($('stage'));
 $('empty-listen').addEventListener('click', () => requestListening());
 $('stop-all').addEventListener('click', () => media.stopAll());
 $('diagnostic-start').addEventListener('click', () => requestListening());
@@ -502,7 +536,7 @@ for (const dialog of document.querySelectorAll('dialog')) {
     if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
   });
 }
-document.addEventListener('visibilitychange', () => { updateMeter(); renderSound(); if (!document.hidden) void media.refreshDevices(); });
+document.addEventListener('visibilitychange', () => { updateMeter(); renderSound(); renderBackgroundMotion(); if (!document.hidden) void media.refreshDevices(); });
 window.addEventListener('pagehide', () => {
   playbackConfirmed = false;
   pendingStart = null;
@@ -511,6 +545,8 @@ window.addEventListener('pagehide', () => {
 });
 if (import.meta.hot) import.meta.hot.dispose(() => {
   media.dispose(); cancelAnimationFrame(levelFrame);
+  stageObserver.disconnect();
+  reducedMotion.removeEventListener('change', renderBackgroundMotion);
   systemTheme.removeEventListener('change', followSystemTheme);
   document.removeEventListener('click', dismissTheme);
   document.removeEventListener('keydown', closeThemeWithEscape);
