@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { toggleListening } from './helpers.js';
+import { toggleListening, isAnalyticsRequest } from './helpers.js';
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -21,18 +21,18 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('production assets load under the Pages subpath, with no external requests', async ({ page, baseURL }) => {
+test('production assets load under the Pages subpath with only the declared analytics endpoints', async ({ page, baseURL }) => {
   const errors = [], requests = [], failures = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('request', (request) => requests.push(request.url()));
-  page.on('response', (response) => { if (response.status() >= 400) failures.push(response.url()); });
+  page.on('response', (response) => { if (response.status() >= 400 && !isAnalyticsRequest(response.url())) failures.push(response.url()); });
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Be there, from anywhere.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Stop all' })).toBeDisabled();
   await expect(page.locator('#empty-state')).toBeVisible();
   expect(await page.locator('video').evaluate((video) => video.srcObject)).toBeNull();
   expect(await page.evaluate(() => window.isSecureContext)).toBe(true);
-  expect(requests.every((url) => url.startsWith(baseURL))).toBe(true);
+  expect(requests.every((url) => url.startsWith(baseURL) || isAnalyticsRequest(url))).toBe(true);
   expect(errors).toEqual([]);
   expect(failures).toEqual([]);
   await page.reload();

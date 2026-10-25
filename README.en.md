@@ -17,7 +17,7 @@ English · [简体中文](README.md)
 
 Ambient Portal (**遥·窗** in Simplified Chinese) is a lightweight, browser-only window into the environment around a device. Open it on a computer you control remotely to preview its camera and play its microphone through the local browser. A remote desktop app such as UU Remote forwards the screen and system audio to your other device.
 
-Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accounts, database, or production runtime dependencies. No media recording, storage, or uploading. Only language, appearance, background motion, aspect ratio, and playback reminder preferences persist in this browser’s `localStorage`.
+Built with Vite, vanilla JavaScript, and native browser APIs. The core app has no backend, accounts, database, or runtime npm dependencies. No media recording, storage, or uploading. Only language, appearance, background motion, aspect ratio, and playback reminder preferences persist in this browser’s `localStorage`. The official site additionally uses Cloudflare Web Analytics for page visits and basic performance information.
 
 ## Features
 
@@ -190,6 +190,18 @@ If you rename the repository, switch to a root user site, or add a custom domain
 
 Local production builds and synthetic-device browser tests do not replace an actual workflow run in your repository, physical-device permission checks, or testing your remote desktop audio route.
 
+## Analytics and privacy
+
+The official site at `https://hanglark.github.io/ambient-portal/` uses Cloudflare Web Analytics for page views, basic visit information, and loading performance. Camera video and microphone audio remain local and are not included in analytics. The footer and remote setup guide disclose this in both languages.
+
+- `src/analytics.js` only loads the beacon in a production build on the specified hostname and project path. Development, localhost previews, deployments on other domains, and forks do not report to this project's analytics by default.
+- The official module script uses the supplied site token and loads independently and asynchronously. Slow or blocked analytics does not prevent camera or microphone use.
+- The script loads from `static.cloudflareinsights.com/beacon.min.js` and reports visit and performance information to `cloudflareinsights.com/cdn-cgi/rum`. The app adds no click tracking or media interaction events.
+- View **Page views** in Cloudflare **Web Analytics**, optionally filtered to `/ambient-portal/`. Collection starts after integration; data may take a few minutes to appear. Network issues and ad blockers can cause missed visits.
+- When moving the official site or enabling your own analytics for a fork, update the hostname, path and site token in `src/analytics.js`, and configure the matching hostname in Cloudflare. The site token is a public embed identifier, not an account API key; no GitHub Secret is needed.
+
+References: [Cloudflare setup](https://developers.cloudflare.com/web-analytics/get-started/), [data collection](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/), [limitations and FAQs](https://developers.cloudflare.com/web-analytics/faq/).
+
 ## Browser verification
 
 The Playwright suite uses installed Google Chrome by default with **synthetic camera and microphone inputs**; it does not open physical capture devices.
@@ -223,6 +235,8 @@ Sound-check tests verify starting listening from the dialog, actual gain restora
 
 Playback reminder tests cover the default reminder, discarded choices on cancellation, persistence across reloads, restoring reminders in Device settings, the sound-check entry point, and feedback when storage access or writes fail. Layout checks cover both languages and themes, narrow screens, and fullscreen.
 
+Analytics tests mirror the production hostname and intercept the third-party script to verify site restrictions, single loading, bilingual disclosure, and usable media controls while analytics is slow or blocked. They do not send test visits. Running the full suite against the real HTTPS site may count actual page loads as visits.
+
 ## Project structure
 
 ```text
@@ -230,6 +244,7 @@ src/
   main.js          Interface, state rendering, and interaction
   media.js         Capture, playback, and resource lifecycle
   camera-format.js Ratio negotiation, serialized switching, verification, and recovery
+  analytics.js     Asynchronous Cloudflare analytics for the official site only
   i18n.js          Local dictionaries, language detection, and preference storage
   icons.js         Local SVG line icons
   style.css        Responsive light and dark interface
@@ -238,7 +253,7 @@ tests/             Lifecycle and browser tests
 .github/workflows/deploy.yml
 ```
 
-No media persistence, network API, third-party fonts, or analytics. Video binds directly to a muted `<video>`. Audio follows `MediaStream → AnalyserNode → GainNode → AudioContext.destination`, without encoding, recording, or a network round trip. Normal requests for static website assets are served by the hosting platform.
+No media persistence, media transport API, or third-party fonts. Video binds directly to a muted `<video>`. Audio follows `MediaStream → AnalyserNode → GainNode → AudioContext.destination`, without encoding, recording, or a network round trip. Static website assets are served by the hosting platform; the official site additionally loads the Cloudflare analytics script described above.
 
 References: [Vite static deployment](https://vite.dev/guide/static-deploy.html#github-pages), [GitHub Pages custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages), [MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia), [MDN AudioContext](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext).
 

@@ -4,6 +4,7 @@ import { detectLanguage, saveLanguage, translate } from './i18n.js';
 import { MediaController, isEngaged, DEFAULT_VOLUME, MAX_VOLUME } from './media.js';
 import { CAMERA_FORMATS, cameraRatioLabel, cameraModeLabel, loadCameraFormat, saveCameraFormat } from './camera-format.js';
 import { initAmbientBackground } from './ambient-background.js';
+import { analyticsEnabled, loadAnalytics } from './analytics.js';
 
 let storage;
 try { storage = window.localStorage; } catch { /* Storage is optional. */ }
@@ -150,12 +151,12 @@ document.querySelector('#app').innerHTML = `
         <p class="notice" id="sound-playback-preference-notice" role="status" hidden>${label('playbackReminderSaveFailed')}</p>${closeButton()}
       </dialog>
     </section>
-    <footer class="privacy-row"><p>${icon('shield')}${label('privacyBody')}</p><button class="text-button" id="guide-open" type="button">${label('guide')}${icon('chevron')}</button></footer>
+    <footer class="privacy-row"><p>${icon('shield')}<span>${label('privacyBody')}${analyticsEnabled ? ` ${label('analyticsNotice')}` : ''}</span></p><button class="text-button" id="guide-open" type="button">${label('guide')}${icon('chevron')}</button></footer>
   </main>
   <dialog id="guide-dialog" aria-labelledby="guide-title" aria-describedby="guide-intro">
     <div class="dialog-heading">${icon('portal')}<h2 id="guide-title">${label('guideTitle')}</h2></div><p id="guide-intro">${label('guideIntro')}</p>
     <ol><li>${label('guideStep1')}</li><li>${label('guideStep2')}</li><li>${label('guideStep3')}</li></ol>
-    <div class="dialog-note">${icon('headphones')}<p>${label('guideNote')}</p></div><p>${label('guidePrivacy')}</p>${closeButton()}
+    <div class="dialog-note">${icon('headphones')}<p>${label('guideNote')}</p></div><p>${label('guidePrivacy')}</p>${analyticsEnabled ? `<p>${label('analyticsDetails')}</p>` : ''}${closeButton()}
   </dialog>
 `;
 
@@ -598,3 +599,4 @@ if (import.meta.hot) import.meta.hot.dispose(() => {
 applyLanguage();
 void media.watchPermissions();
 void media.watchDevices();
+loadAnalytics();
