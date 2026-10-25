@@ -72,7 +72,7 @@ Use the appearance icon at the top right to choose **System, Light, or Dark**. T
 
 Changing appearance keeps camera and microphone capture running, preserves capture quality and playback volume, and leaves the live picture free of color filters. On reload, the preference is applied before the app loads to avoid briefly showing the other palette.
 
-The idle background uses four soft patches of mist blue, lilac, sage and peach. Each drifts and stretches at its own pace, following a new random path every cycle with a smooth handoff. Light and dark themes have their own colors and opacity; on phones, the patches stay closer to the edges. The center stays quiet so text and buttons remain clear. Pause the animation from the top-right corner of the preview; the choice is remembered. The system’s reduced-motion setting shows a still pastel background. The background fades out when capture starts and pauses while the page is hidden, the preview is offscreen or a dialog is open.
+The idle background uses four soft patches of mist blue, lilac, sage and peach. Each drifts and stretches at its own pace, following a new random path every cycle with a smooth handoff. The patches are spread throughout the preview, with a balanced composition on phones too. Light and dark themes have their own colors and opacity. Soft, translucent colors keep the central text and buttons clear. Pause the animation from the top-right corner of the preview; the choice is remembered. The system’s reduced-motion setting shows a still pastel background. The background fades out when capture starts and pauses while the page is hidden, the preview is offscreen or a dialog is open.
 
 ### Capture quality and volume
 
