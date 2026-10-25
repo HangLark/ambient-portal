@@ -1,6 +1,6 @@
 # Ambient Portal
 
-**See and hear your surroundings.**
+**Be there, from anywhere.**
 
 English · [简体中文](README.md)
 
@@ -23,8 +23,8 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 
 - Direct camera preview and fullscreen viewing. Prefers the highest available native resolution, then the highest frame rate at that resolution, with actual capture settings displayed.
 - Auto, 16:9, 4:3, 1:1, and 9:16 aspect ratio negotiation. Native formats come first; unavailable formats keep the working picture, with an explicit option to allow cropping.
-- Independent camera and microphone controls, plus one action to stop all capture. Navigation and refresh release media tracks.
-- The preview fills the remaining window height, with a shared control bar in desktop, phone, and fullscreen views. Choose **Start camera** or **Listen only** directly from the empty preview.
+- **Start camera & sound** starts both inputs in one action. Camera and microphone remain independent: one can keep working if the other fails. One action stops everything; reloading or leaving releases media tracks.
+- The preview fills the remaining window height, with a shared control bar in desktop, phone, and fullscreen views. **Camera only** and **Listen only** are also available from the initial view.
 - **Device settings** identifies the actual camera and microphone, with independent selection when multiple authorized inputs are available.
 - An audio-only view with real input levels. **Can’t hear anything?** traces microphone input, browser playback, and remote audio forwarding.
 - Sound checks suggest the next step for the current state, with actions to start listening, resume paused playback, or restore muted volume to the default 35%.
@@ -60,8 +60,8 @@ Production preview: `http://127.0.0.1:4173/ambient-portal/`. The preview server 
 
 ## Use the app
 
-1. Open the page in Chrome or Edge on the **controlled device**. Click **Start camera** and allow camera access.
-2. Enable **Listen** when you want sound, or choose **Listen only** from the initial view without starting the camera. Check that the controlled device won’t play sound through its speakers, then click **Start listening** and allow microphone access. This page sends sound to **the controlled device’s default system audio output**, where your remote app can capture it.
+1. Open the page in Chrome or Edge on the **controlled device**. Choose **Start camera & sound**, or use **Camera only** or **Listen only** when you need one input.
+2. Before starting both inputs or listening, check that the controlled device won’t play sound through its speakers, then confirm the reminder. Starting both begins camera and microphone access together; the browser may ask for the two permissions separately. This page sends microphone sound to **the controlled device’s default system audio output**, where your remote app can capture it. **Camera only** leaves the microphone off.
 3. If playback is paused by the browser, click **Resume audio**. Start at a low volume and adjust as needed.
 4. The speaker button beside the volume slider immediately mutes playback; click again to restore its level. The microphone keeps capturing, but remote forwarding receives no sound from this page. **Stop camera** stops video only; turning **Listen** off releases the microphone. **Stop all** releases both devices.
 5. Leaving or refreshing the page also stops capture. Saved browser permission never starts capture automatically on your next visit.
@@ -82,9 +82,9 @@ Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perc
 
 ### Output checks and playback mute
 
-By default, the first start after opening or refreshing the page reminds you to avoid speaker playback on the controlled device. Use your remote app’s option to mute that device, if available, or connect headphones there. Keep this page’s playback and remote audio forwarding on. No microphone request or playback occurs before confirmation. Cancel, Escape, or clicking outside the dialog leaves the microphone off and discards the checkbox choice.
+By default, the first start after opening or refreshing the page reminds you to avoid speaker playback on the controlled device. Use your remote app’s option to mute that device, if available, or connect headphones there. Keep this page’s playback and remote audio forwarding on. No microphone request or playback occurs before confirmation; when starting both, the camera also waits for confirmation. Cancel, Escape, or clicking outside the dialog discards the pending start and checkbox choice.
 
-**Don’t remind me in this browser** is unchecked by default. The choice is saved only when checked and confirmed with **Start listening**, and survives reopening or refreshing the page. Without it, confirmation lasts only for the current page. Change the preference anytime in **Device settings → Microphone → Remind me before listening**. Turning reminders back on takes effect at the next manual start without interrupting current listening. If the browser cannot save the preference, a message explains that it applies only to the current page.
+**Don’t remind me in this browser** is unchecked by default. The choice is saved only when checked and confirmed with **Start camera & sound** or **Start listening**, and survives reopening or refreshing the page. Without it, confirmation lasts only for the current page. Change the preference anytime in **Device settings → Microphone → Remind me before listening**. Turning reminders back on takes effect at the next manual start without interrupting current listening. If the browser cannot save the preference, a message explains that it applies only to the current page.
 
 **Listen only** and starting from **Can’t hear anything?** follow the same preference. Turning off reminders never starts listening automatically or bypasses browser microphone permissions. The page cannot reliably read system mute; confirmation records your check, not an automatic mute detection.
 

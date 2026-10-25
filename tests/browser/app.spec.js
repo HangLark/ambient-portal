@@ -27,7 +27,7 @@ test('production assets load under the Pages subpath, with no external requests'
   page.on('request', (request) => requests.push(request.url()));
   page.on('response', (response) => { if (response.status() >= 400) failures.push(response.url()); });
   await page.goto('./');
-  await expect(page.getByRole('heading', { name: 'Camera & ambient sound' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Be there, from anywhere.' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Stop all' })).toBeDisabled();
   await expect(page.locator('#empty-state')).toBeVisible();
   expect(await page.locator('video').evaluate((video) => video.srcObject)).toBeNull();
@@ -224,7 +224,8 @@ test('Chinese browser language is selected automatically', async ({ browser, bas
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
   await expect(page.locator('.brand')).toHaveText('遥·窗');
   await expect(page).toHaveTitle('遥·窗 — 实时画面与环境声音');
-  await expect(page.locator('#empty-start')).toHaveText('开启摄像头');
+  await expect(page.locator('#start-all')).toHaveText('开启画面与声音');
+  await expect(page.locator('#empty-start')).toHaveText('仅看画面');
   await context.close();
 });
 

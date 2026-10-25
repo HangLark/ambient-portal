@@ -49,8 +49,11 @@ document.querySelector('#app').innerHTML = `
           <div class="preview-placeholder" id="preview-placeholder" aria-hidden="true">${icon('camera')}</div>
           <h3 id="empty-title"></h3><p id="empty-body"></p>
           <div class="empty-actions">
-            <button class="primary-button" id="empty-start" type="button">${icon('camera')}<span id="empty-action"></span></button>
-            <button class="secondary-button" id="empty-listen" type="button">${icon('headphones')}${label('listenOnly')}</button>
+            <button class="primary-button" id="start-all" type="button">${icon('portal')}${label('startTogether')}</button>
+            <div class="single-input-actions">
+              <button class="text-button" id="empty-start" type="button">${icon('camera')}<span id="empty-action"></span></button>
+              <button class="text-button" id="empty-listen" type="button">${icon('headphones')}${label('listenOnly')}</button>
+            </div>
           </div>
           <p class="empty-hint" id="empty-hint"></p>
         </div>
@@ -96,7 +99,7 @@ document.querySelector('#app').innerHTML = `
         </div>
         <form method="dialog" class="dialog-actions">
           <button class="text-button" id="playback-cancel" type="submit" autofocus>${label('cancelPlayback')}</button>
-          <button class="primary-button" id="playback-confirm" type="button">${label('confirmPlayback')}</button>
+          <button class="primary-button" id="playback-confirm" type="button"></button>
         </form>
       </dialog>
       <dialog id="settings-dialog" aria-labelledby="settings-title">
@@ -142,6 +145,7 @@ let lastSignalTime = -Infinity;
 let inputDetected = false;
 let fullscreenError = false;
 let playbackConfirmed = false;
+let pendingStart = null;
 const meters = [$('level-meter'), $('scene-meter')].map((meter) => [...meter.children]);
 
 function inputKey() {
@@ -247,11 +251,15 @@ function render() {
   $('empty-body').textContent = t(emptyKeys[1]);
   $('empty-hint').textContent = emptyKeys[2] ? t(emptyKeys[2]) : '';
   $('empty-hint').hidden = !emptyKeys[2] || Boolean(media.unavailable);
-  $('empty-action').textContent = t(camera.error ? 'retryCamera' : 'startCamera');
+  $('start-all').hidden = media.engaged || Boolean(camera.error || mic.error);
+  $('start-all').disabled = Boolean(media.unavailable);
+  $('empty-action').textContent = t(camera.error ? 'retryCamera' : 'cameraOnly');
+  $('empty-start').className = camera.error ? 'primary-button' : 'text-button';
   $('empty-start').hidden = cameraBusy || cameraActive;
   $('empty-start').disabled = Boolean(media.unavailable);
   $('empty-listen').hidden = cameraBusy || cameraActive || micEngaged;
   $('empty-listen').disabled = Boolean(media.unavailable);
+  $('preview-placeholder').hidden = !cameraBusy && !camera.error && !camera.muted;
   $('preview-placeholder').classList.toggle('is-pending', cameraBusy);
   const settings = media.cameraStream?.getVideoTracks()[0]?.getSettings();
   const frameRate = settings?.frameRate ? `${Math.round(settings.frameRate * 10) / 10} ${t('fps')}` : '';
@@ -313,6 +321,7 @@ function render() {
   $('resume-audio').hidden = mic.status !== 'paused';
   $('sound-advice').textContent = t(micEngaged ? 'outputRoute' : 'volumeIdle');
   $('playback-reminder').setAttribute('aria-checked', String(playbackReminderEnabled));
+  $('playback-confirm').textContent = t(pendingStart === 'both' ? 'confirmTogether' : 'confirmPlayback');
   for (const id of ['playback-preference-notice', 'playback-reminder-notice', 'sound-playback-preference-notice']) $(id).hidden = !playbackReminderSaveFailed;
   $('mic-error').hidden = !mic.error;
   $('mic-error').textContent = mic.error ? t(mic.error) : '';
@@ -411,16 +420,21 @@ for (const id of ['empty-start', 'add-camera']) $(id).addEventListener('click', 
 $('camera-format').addEventListener('change', (event) => { void media.setCameraFormat(event.target.value); });
 $('allow-crop').addEventListener('click', () => { $('camera-format').focus({ preventScroll: true }); void media.allowCameraCrop(); });
 for (const name of ['camera', 'microphone']) $(`${name}-device`).addEventListener('change', (event) => { void media.selectDevice(name, event.target.value); });
-function startListening() {
+function startListening(mode = 'microphone') {
   // The confirmation click retains user activation for AudioContext.resume().
-  const focusTarget = $('sound-dialog').open ? $('sound-dialog').querySelector('form button') : $('microphone-switch');
+  const focusTarget = mode === 'both' ? $('camera-button')
+    : $('sound-dialog').open ? $('sound-dialog').querySelector('form button') : $('microphone-switch');
   focusTarget.focus({ preventScroll: true });
   void media.startMicrophone();
+  // Start both within this gesture; each input keeps its own permission and failure path.
+  if (mode === 'both') void media.startCamera();
 }
 
-function requestListening() {
-  if (!playbackReminderEnabled || playbackConfirmed) startListening();
+function requestListening(mode = 'microphone') {
+  if (!playbackReminderEnabled || playbackConfirmed) startListening(mode);
   else {
+    pendingStart = mode;
+    render();
     $('playback-dont-remind').checked = false;
     $('playback-dialog').showModal();
   }
@@ -440,16 +454,22 @@ function setPlaybackReminder(enabled) {
 }
 
 $('playback-confirm').addEventListener('click', () => {
+  const mode = pendingStart || 'microphone';
+  pendingStart = null;
   playbackConfirmed = true;
   if ($('playback-dont-remind').checked) setPlaybackReminder(false);
   $('playback-dialog').close();
-  startListening();
+  startListening(mode);
+});
+$('playback-dialog').addEventListener('close', () => {
+  if (!$('playback-dialog').open) pendingStart = null;
 });
 $('playback-reminder').addEventListener('click', () => setPlaybackReminder(!playbackReminderEnabled));
 $('microphone-switch').addEventListener('click', () => isEngaged(media.microphone) ? media.stopMicrophone() : requestListening());
-$('empty-listen').addEventListener('click', requestListening);
+$('start-all').addEventListener('click', () => requestListening('both'));
+$('empty-listen').addEventListener('click', () => requestListening());
 $('stop-all').addEventListener('click', () => media.stopAll());
-$('diagnostic-start').addEventListener('click', requestListening);
+$('diagnostic-start').addEventListener('click', () => requestListening());
 $('diagnostic-unmute').addEventListener('click', () => {
   $('sound-dialog').querySelector('form button').focus({ preventScroll: true });
   media.setVolume(DEFAULT_VOLUME);
@@ -485,6 +505,7 @@ for (const dialog of document.querySelectorAll('dialog')) {
 document.addEventListener('visibilitychange', () => { updateMeter(); renderSound(); if (!document.hidden) void media.refreshDevices(); });
 window.addEventListener('pagehide', () => {
   playbackConfirmed = false;
+  pendingStart = null;
   $('playback-dialog').close();
   media.stopAll();
 });

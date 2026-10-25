@@ -47,6 +47,7 @@ async function expectReachable(page, selector) {
 test('start is above the fold; desktop, mobile and fullscreen keep the complete control bar reachable', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto('./');
+  await expectReachable(page, '#start-all');
   await expectReachable(page, '#empty-start');
   for (const selector of ['#camera-button', '#microphone-switch', '#stop-all', '#volume']) await expectReachable(page, selector);
   await page.locator('#empty-start').click();
@@ -69,6 +70,7 @@ test('start is above the fold; desktop, mobile and fullscreen keep the complete 
   for (const [width, height] of [[390, 844], [320, 760]]) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => window.scrollTo(0, 0));
+    await expectReachable(page, '#start-all');
     await expectReachable(page, '#empty-start');
     await expectReachable(page, '#empty-listen');
     await toggleListening(page);

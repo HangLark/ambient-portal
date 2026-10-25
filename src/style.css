@@ -146,8 +146,10 @@ h1 { font-size: 24px; font-weight: 600; letter-spacing: -.5px; line-height: 1.4;
 .empty-state h3 { font-size: 20px; font-weight: 500; letter-spacing: -.3px; line-height: 1.5; }
 .empty-state > p { margin-top: 8px; font-size: 14px; color: var(--muted); line-height: 1.6; }
 .empty-state > .empty-hint { font-size: 12px; margin-top: 16px; }
-.empty-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin-top: 24px; }
+.empty-actions { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; margin-top: 24px; }
 .empty-actions:not(:has(button:not([hidden]))) { display: none; }
+.single-input-actions { display: flex; justify-content: center; align-items: center; gap: 12px; }
+.single-input-actions:not(:has(button:not([hidden]))) { display: none; }
 .primary-button, .secondary-button { border: 1px solid var(--action-border); border-radius: 7px; background: var(--action-bg); color: var(--action-text); display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; min-height: 44px; font-size: 14px; font-weight: 500; }
 .primary-button:not(:disabled):hover { background: var(--action-hover); }
 .secondary-button { border-color: var(--border-strong); background: transparent; color: var(--text-secondary); }
@@ -334,8 +336,7 @@ html[lang='zh-CN'] h1, html[lang='zh-CN'] .empty-state h3 { letter-spacing: .4px
   .language-button { padding: 0 10px; }
 }
 @media (max-width: 360px) {
-  .empty-actions { flex-wrap: nowrap; }
-  .empty-actions button { flex: 1; padding: 0 8px; }
+  .empty-actions button { padding: 0 8px; }
   .empty-actions .icon, .camera-button .icon { display: none; }
 }
 @media (max-height: 550px) and (orientation: landscape) {
