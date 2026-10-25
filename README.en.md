@@ -24,7 +24,7 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 - Direct camera preview and fullscreen viewing. Prefers the highest available native resolution, then the highest frame rate at that resolution, with actual capture settings displayed.
 - Auto, 16:9, 4:3, 1:1, and 9:16 aspect ratio negotiation. Native formats come first; unavailable formats keep the working picture, with an explicit option to allow cropping.
 - Independent camera and microphone controls, plus one action to stop all capture. Navigation and refresh release media tracks.
-- A shared control bar in desktop, phone, and fullscreen views. Start directly from the empty preview; introductory copy collapses during capture.
+- The preview fills the remaining window height, with a shared control bar in desktop, phone, and fullscreen views. Start directly from the empty preview; introductory copy collapses during capture.
 - **Device settings** identifies the actual camera and microphone, with independent selection when multiple authorized inputs are available.
 - An audio-only view with real input levels. **Can’t hear anything?** traces microphone input, browser playback, and remote audio forwarding.
 - Sound checks suggest the next step for the current state, with actions to start listening, resume paused playback, or restore muted volume to the default 35%.
