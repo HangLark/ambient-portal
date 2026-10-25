@@ -84,7 +84,17 @@ document.querySelector('#app').innerHTML = `
         <div class="control-bar">
           <button class="camera-button secondary-button" id="camera-button" type="button"><span id="camera-action-icon"></span><span id="camera-action"></span></button>
           <button class="monitor-button" id="microphone-switch" type="button" role="switch" aria-checked="false" aria-describedby="sound-advice">${icon('mic')}<span>${label('listen')}</span><span class="switch-track" aria-hidden="true"><i></i></span></button>
-          <div class="volume-group"><div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div><div class="volume-slider"><button class="icon-button mute-button" id="mute-playback" type="button" aria-describedby="playback-muted-help"></button><div class="range-control" id="volume-track"><span class="range-track" aria-hidden="true"><i></i>${volumeAnchors.map((value) => `<span class="range-mark" data-volume="${value}" style="--position: ${value / MAX_VOLUME}%"><span class="range-mark-label">${value}%${value === DEFAULT_VOLUME * 100 ? `<span class="range-mark-default"> ${label('volumeDefault')}</span>` : ''}</span></span>`).join('')}</span><input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="sound-advice volume-snap-help volume-boost-hint" /></div></div><span class="visually-hidden" id="volume-snap-help">${label('volumeSnapHelp')}</span></div>
+          <div class="volume-group">
+            <div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div>
+            <div class="volume-slider">
+              <button class="icon-button mute-button" id="mute-playback" type="button" aria-describedby="playback-muted-help"></button>
+              <div class="range-control" id="volume-track">
+                <span class="range-track" aria-hidden="true"><i></i>${volumeAnchors.map((value) => `<span class="range-mark" data-volume="${value}" style="--position: ${value / MAX_VOLUME}%"></span>`).join('')}</span>
+                <input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="sound-advice volume-snap-help volume-boost-hint" />
+              </div>
+            </div>
+            <span class="visually-hidden" id="volume-snap-help">${label('volumeSnapHelp')}</span>
+          </div>
           <button class="stop-button" id="stop-all" type="button" disabled>${icon('stop')}${label('stopAll')}</button>
         </div>
         <div class="audio-status-row">
@@ -336,7 +346,11 @@ function render() {
   $('volume').setAttribute('aria-valuetext', `${volumePercent}%${volumeAnchorLabel ? ` · ${volumeAnchorLabel}` : ''}`);
   $('volume').title = t('volumeSnapHelp');
   $('volume-value').classList.toggle('is-anchor', !$('volume').disabled && volumeAnchors.includes(volumePercent));
-  for (const mark of document.querySelectorAll('.range-mark')) mark.dataset.active = String(!$('volume').disabled && Number(mark.dataset.volume) === volumePercent);
+  $('volume-value').title = volumeAnchorLabel;
+  for (const mark of document.querySelectorAll('.range-mark')) {
+    mark.dataset.active = String(Number(mark.dataset.volume) === volumePercent);
+    mark.dataset.passed = String(Number(mark.dataset.volume) < volumePercent);
+  }
   $('volume-value').classList.toggle('is-boosted', media.volume > 1);
   const playbackMuted = media.volume === 0;
   const muteLabel = playbackMuted ? `${t('unmutePlayback')} · ${Math.round(media.unmutedVolume * 100)}%` : t('mutePlayback');

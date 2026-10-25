@@ -61,8 +61,8 @@ test('mouse dragging settles at meaningful levels, leaves each stop freely, and 
   await expectVolume(page, 100);
   await page.locator('#volume').press('ArrowLeft');
   await expectVolume(page, 99);
-  const defaultLabel = await page.locator('.range-mark[data-volume="35"] .range-mark-label').boundingBox();
-  await page.mouse.click(defaultLabel.x + defaultLabel.width / 2, defaultLabel.y + defaultLabel.height / 2);
+  const defaultPoint = await sliderPoint(page, 35);
+  await page.mouse.click(defaultPoint.x, defaultPoint.y);
   await expectVolume(page, 35);
   await page.locator('#volume').press('ArrowRight');
   await expectVolume(page, 36);

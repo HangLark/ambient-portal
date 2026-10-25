@@ -209,17 +209,12 @@ h1 { font-size: 24px; font-weight: 600; letter-spacing: -.5px; line-height: 1.4;
 .mute-button { flex-shrink: 0; width: 44px; height: 44px; margin-left: -8px; }
 .mute-button[data-muted='true'] { color: var(--warning); background: var(--warning-bg); }
 .mute-button[data-muted='true']:not(:disabled):hover { color: var(--warning); background: var(--warning-hover); }
-.range-control { --volume: 17.5%; position: relative; flex: 1; min-width: 0; height: 44px; container-type: inline-size; }
+.range-control { --volume: 17.5%; position: relative; flex: 1; min-width: 0; height: 44px; }
 .range-track { position: absolute; inset: 50% 7px auto; height: 3px; margin-top: -1.5px; background: var(--track); border-radius: 2px; pointer-events: none; }
 .range-track i { display: block; width: var(--volume); height: 100%; background: var(--accent); border-radius: inherit; }
-.range-mark { position: absolute; left: var(--position); top: -3px; width: 1px; height: 9px; background: var(--subtle); }
-.range-mark-label { position: absolute; top: 11px; left: 0; transform: translateX(-50%); font-size: 12px; white-space: nowrap; line-height: 16px; color: var(--muted); }
-.range-mark[data-active='true'] { background: var(--accent); }
-.range-mark[data-active='true'] .range-mark-label { color: var(--accent); }
-.range-control.is-disabled .range-mark { background: var(--track); }
-.range-control.is-disabled .range-mark-label { color: var(--subtle); }
-@container (max-width: 180px) { .range-mark-default { display: none; } }
-@container (max-width: 140px) { .range-mark-label { display: none; } }
+.range-mark { position: absolute; left: var(--position); top: 0; width: 3px; height: 3px; transform: translateX(-50%); border-radius: 50%; background: var(--text-secondary); opacity: .7; }
+.range-mark[data-passed='true'] { background: var(--control-bg); }
+.range-mark[data-active='true'], .range-control.is-disabled .range-mark { opacity: 0; }
 .range-control.is-disabled .range-track i { background: var(--subtle); }
 input[type='range'] { position: relative; appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; height: 44px; background: transparent; margin: 0; cursor: pointer; }
 input[type='range']::-webkit-slider-runnable-track { height: 3px; background: transparent; }

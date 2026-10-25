@@ -82,7 +82,7 @@ Capability ranges do not guarantee every combination is available. The interface
 
 Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perceived loudness. This is not system volume. Above 100%, the interface highlights distortion and feedback risks. Strong signals may clip, so lower volume if needed. Capture quality and playback volume are independent: the default 35% playback level does not reduce capture quality.
 
-The slider marks **35% (default) and 100%**. Mouse dragging gently snaps within 3 percentage points of either mark, or 5 points on a touchscreen. The matching mark and readout highlight; keep dragging beyond that range to leave it. Arrow keys always adjust by 1%, while Home / End reach 0% / 200%. Short tracks hide mark labels to prevent overlap.
+Two small dots within the track mark **35% (default) and 100%**, without a separate row of labels. Mouse dragging gently snaps within 3 percentage points of either dot, or 5 points on a touchscreen. The volume readout highlights at either stop; keep dragging beyond that range to leave it. The dots stay hidden until listening is enabled. Arrow keys always adjust by 1%, while Home / End reach 0% / 200%.
 
 ### Output checks and playback mute
 
