@@ -189,14 +189,32 @@ test('a pending camera request can be cancelled from the UI', async ({ page }) =
 
 test('language persists after reload without reactivating capture', async ({ page }) => {
   await page.goto('./');
+  await expect(page.locator('.brand')).toHaveText('Ambient Portal');
   await page.getByRole('button', { name: 'Switch to Simplified Chinese' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(page.locator('.brand')).toHaveText('遥·窗');
+  await expect(page.locator('.brand')).toHaveAccessibleName('遥·窗');
+  await expect(page).toHaveTitle('遥·窗 — 实时画面与环境声音');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /^遥·窗/);
+  await page.locator('#guide-open').click();
+  await expect(page.locator('#guide-intro')).toContainText('遥·窗');
+  await expect(page.locator('[data-i18n="guidePrivacy"]')).toContainText('遥·窗');
+  await page.keyboard.press('Escape');
   await page.locator('#camera-button').click();
   await expect(page.locator('#preview-status-text')).toHaveText('实时');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(page.locator('.brand')).toHaveText('遥·窗');
+  await expect(page).toHaveTitle('遥·窗 — 实时画面与环境声音');
   await expect(page.locator('#camera-button')).toHaveText('开启摄像头');
   expect(await page.evaluate(() => window.__testTracks.length)).toBe(0);
+  await page.getByRole('button', { name: 'Switch to English' }).click();
+  await expect(page.locator('.brand')).toHaveText('Ambient Portal');
+  await expect(page.locator('.brand')).toHaveAccessibleName('Ambient Portal');
+  await expect(page).toHaveTitle('Ambient Portal — Live camera and ambient sound');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /^Ambient Portal/);
+  await page.locator('#guide-open').click();
+  await expect(page.locator('#guide-intro')).toContainText('Ambient Portal');
 });
 
 test('Chinese browser language is selected automatically', async ({ browser, baseURL }) => {
@@ -204,6 +222,8 @@ test('Chinese browser language is selected automatically', async ({ browser, bas
   const page = await context.newPage();
   await page.goto(baseURL);
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(page.locator('.brand')).toHaveText('遥·窗');
+  await expect(page).toHaveTitle('遥·窗 — 实时画面与环境声音');
   await expect(page.locator('#empty-start')).toHaveText('开启摄像头');
   await context.close();
 });

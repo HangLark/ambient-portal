@@ -113,7 +113,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .theme-options .icon { width: 15px; height: 15px; }
 .header-inner { height: 100%; display: flex; justify-content: space-between; align-items: center; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 550; letter-spacing: -.4px; text-decoration: none; color: var(--text); }
-.brand-light { font-weight: 400; color: var(--muted); }
+html[lang='zh-CN'] .brand { letter-spacing: 1.5px; }
 .brand-symbol { width: 26px; height: 30px; color: var(--accent); stroke-width: 1.4; }
 .language-button { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 7px; color: var(--text-secondary); background: var(--subtle-bg); font-size: 12px; }
 .language-button:hover { background: var(--hover-bg); }

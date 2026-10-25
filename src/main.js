@@ -22,7 +22,7 @@ const closeButton = () => `<form method="dialog"><button class="text-button dial
 document.querySelector('#app').innerHTML = `
   <a class="skip-link" href="#controls">${label('skip')}</a>
   <header class="site-header"><div class="header-inner">
-    <a class="brand" href="#heading" aria-label="Ambient Portal">${icon('portal', 'brand-symbol')}<span>Ambient<span class="brand-light"> Portal</span></span></a>
+    <a class="brand" id="brand" href="#heading" aria-label="${t('brandName')}">${icon('portal', 'brand-symbol')}${label('brandName')}</a>
     <div class="header-actions">
       <details class="theme-control" id="theme-control">
         <summary class="theme-button" id="theme-button"></summary>
@@ -364,7 +364,9 @@ function applyTheme() {
 function applyLanguage() {
   document.documentElement.lang = language;
   document.title = t('pageTitle');
+  document.querySelector('meta[name="description"]').content = t('pageDescription');
   document.querySelectorAll('[data-i18n]').forEach((element) => { element.textContent = t(element.dataset.i18n); });
+  $('brand').setAttribute('aria-label', t('brandName'));
   $('language-label').textContent = language === 'en-US' ? '中文' : 'EN';
   $('language').setAttribute('aria-label', t('language'));
   $('language').title = t('language');

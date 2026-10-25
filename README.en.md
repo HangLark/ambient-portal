@@ -15,7 +15,7 @@ English · [简体中文](README.md)
 
 </details>
 
-Ambient Portal is a lightweight, browser-only window into the environment around a device. Open it on a computer you control remotely to preview its camera and play its microphone through the local browser. A remote desktop app such as UU Remote forwards the screen and system audio to your other device.
+Ambient Portal (**遥·窗** in Simplified Chinese) is a lightweight, browser-only window into the environment around a device. Open it on a computer you control remotely to preview its camera and play its microphone through the local browser. A remote desktop app such as UU Remote forwards the screen and system audio to your other device.
 
 Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accounts, database, or production runtime dependencies. No media recording, storage, or uploading. Only language, appearance, aspect ratio, and playback reminder preferences persist in this browser’s `localStorage`.
 

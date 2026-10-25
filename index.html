@@ -23,13 +23,13 @@
         document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--page-bg').trim();
       })();
     </script>
-    <meta name="description" content="Preview the camera and listen to ambient sound on this device. Independent controls, local processing, and no media recording or uploads." />
+    <meta name="description" content="遥·窗 Ambient Portal — 配合远程桌面，看见现场、听见环境。Live camera preview and ambient sound with your remote desktop app." />
     <link rel="icon" type="image/svg+xml" href="/portal.svg" />
-    <title>Ambient Portal</title>
+    <title>遥·窗 | Ambient Portal</title>
   </head>
   <body>
     <div id="app"></div>
-    <noscript>Ambient Portal needs JavaScript to access your camera and microphone. / 请启用 JavaScript 以使用摄像头和麦克风。</noscript>
+    <noscript>Ambient Portal needs JavaScript to access your camera and microphone. / <span lang="zh-CN">遥·窗需要启用 JavaScript，才能使用摄像头和麦克风。</span></noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
