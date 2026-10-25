@@ -6,7 +6,8 @@
   --page-bg: #111315;
   --panel-bg: #1a1d20;
   --stage-bg: #111315;
-  --standby-line: #8ca5ce;
+  --standby-pane: #242b34;
+  --standby-pane-soft: #1c232b;
   --control-bg: #1c2024;
   --dialog-bg: #23272c;
   --field-bg: #1b1f23;
@@ -47,7 +48,8 @@
   --page-bg: #f5f6f7;
   --panel-bg: #ffffff;
   --stage-bg: #f9fafb;
-  --standby-line: #6b86ae;
+  --standby-pane: #e3e8ef;
+  --standby-pane-soft: #edf0f4;
   --control-bg: #f0f2f4;
   --dialog-bg: #ffffff;
   --field-bg: #f9fafb;
@@ -143,25 +145,22 @@ h1 { font-size: 24px; font-weight: 600; letter-spacing: -.5px; line-height: 1.4;
 .stage { position: relative; flex: 1 0 auto; min-height: 300px; background: var(--stage-bg); overflow: hidden; display: grid; place-items: center; }
 .stage video { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: contain; background: var(--video-bg); opacity: 0; transition: opacity .25s ease; }
 .stage[data-state='active'] video { opacity: 1; }
-.standby-art { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.standby-window { position: absolute; inset: -24px; width: calc(100% + 48px); height: calc(100% + 48px); stroke: var(--standby-line); opacity: var(--window-opacity); }
-.standby-window path { vector-effect: non-scaling-stroke; }
-.window-band { stroke-width: 56px; opacity: .18; }
-.window-edge { stroke-width: 1.2px; }
-.standby-window-far { --window-opacity: .24; }
-.standby-window-middle { --window-opacity: .38; }
-.standby-window-near { --window-opacity: .52; }
+.standby-art { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 1; transition: opacity .2s ease, display .2s allow-discrete; }
+.standby-art[hidden] { opacity: 0; }
+.window-shadow { --shadow-x: 12px; --shadow-y: 8px; position: absolute; left: -64px; top: -50px; width: calc(clamp(160px, 50% - 236px, 440px) + 64px); height: calc(100% + 100px); overflow: visible; }
+.window-pane { fill: var(--standby-pane); }
+.window-pane-soft { fill: var(--standby-pane-soft); }
+.window-panes-mobile { display: none; }
 .background-motion { position: absolute; right: 8px; top: 4px; color: var(--subtle); }
 .background-motion .icon { width: 15px; height: 15px; }
 @media (prefers-reduced-motion: no-preference) {
-  .standby-window { animation: window-drift 14s ease-in-out infinite alternate; }
-  .standby-window-far { animation-duration: 20s; animation-delay: -10s; }
-  .standby-window-middle { animation-duration: 17s; animation-delay: -5s; }
-  .standby-art[data-paused='true'] .standby-window, :root:has(dialog[open]) .standby-window { animation-play-state: paused; }
+  .window-shadow { animation: window-shift 20s ease-in-out infinite; }
+  .standby-art[data-paused='true'] .window-shadow, :root:has(dialog[open]) .window-shadow { animation-play-state: paused; }
+  .standby-art[hidden] .window-shadow { animation: none; }
 }
-@keyframes window-drift {
-  from { transform: translate3d(-16px, 12px, 0) scale(1); opacity: calc(var(--window-opacity) * .72); }
-  to { transform: translate3d(16px, -12px, 0) scale(1.025); opacity: var(--window-opacity); }
+@keyframes window-shift {
+  0%, 100% { transform: translate3d(calc(-1 * var(--shadow-x)), calc(-1 * var(--shadow-y)), 0); }
+  50% { transform: translate3d(var(--shadow-x), var(--shadow-y), 0); }
 }
 .empty-state { position: relative; text-align: center; width: min(520px, calc(100% - 40px)); padding: 32px 0; }
 .preview-placeholder { margin: 0 auto 20px; color: var(--subtle); }
@@ -327,8 +326,9 @@ html[lang='zh-CN'] h1, html[lang='zh-CN'] .empty-state h3 { letter-spacing: .4px
   .panel-toolbar .status-badge { gap: 5px; }
   #settings-open { gap: 6px; padding: 0 6px; white-space: nowrap; }
   .stage { min-height: 300px; }
-  .standby-window-near { display: none; }
-  .window-band { stroke-width: 28px; }
+  .window-shadow { --shadow-x: 8px; --shadow-y: 4px; inset: 0; width: 100%; height: 100%; }
+  .window-panes-desktop { display: none; }
+  .window-panes-mobile { display: initial; }
   .empty-state { width: calc(100% - 32px); padding: 28px 0; }
   .preview-placeholder { margin-bottom: 16px; }
   .empty-state h3 { font-size: 18px; }
@@ -365,7 +365,6 @@ html[lang='zh-CN'] h1, html[lang='zh-CN'] .empty-state h3 { letter-spacing: .4px
   .language-button { padding: 0 10px; }
 }
 @media (max-width: 360px) {
-  .standby-window-middle { display: none; }
   .empty-actions button { padding: 0 8px; }
   .empty-actions .icon, .camera-button .icon { display: none; }
 }

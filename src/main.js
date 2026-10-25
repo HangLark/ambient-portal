@@ -52,11 +52,16 @@ document.querySelector('#app').innerHTML = `
       <div class="stage" id="stage" data-state="idle">
         <video id="preview-video" autoplay playsinline muted></video>
         <div class="standby-art" id="standby-art" aria-hidden="true">
-          ${[
-            ['far', 'M140 780V355C140 86 346-88 600-88s460 174 460 443v425'],
-            ['middle', 'M240 780V355C240 142 401 10 600 10s360 132 360 345v425'],
-            ['near', 'M340 780V355C340 203 456 108 600 108s260 95 260 247v425'],
-          ].map(([depth, path]) => `<svg class="standby-window standby-window-${depth}" viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"><path class="window-band" d="${path}" /><path class="window-edge" d="${path}" /></svg>`).join('')}
+          <svg class="window-shadow" viewBox="0 0 480 700" preserveAspectRatio="none">
+            <g class="window-panes-desktop">
+              <path class="window-pane" d="M-140-80H110L260 230H10Z" />
+              <path class="window-pane window-pane-soft" d="M28 266H278L462 650H212Z" />
+            </g>
+            <g class="window-panes-mobile">
+              <path class="window-pane" d="M-80-60H112L184 34H-8Z" />
+              <path class="window-pane window-pane-soft" d="M-260 550H-150L180 800H20Z" />
+            </g>
+          </svg>
         </div>
         <div class="empty-state" id="empty-state">
           <div class="preview-placeholder" id="preview-placeholder" aria-hidden="true">${icon('camera')}</div>
