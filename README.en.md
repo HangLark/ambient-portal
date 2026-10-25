@@ -72,7 +72,7 @@ Use the appearance icon at the top right to choose **System, Light, or Dark**. T
 
 Changing appearance keeps camera and microphone capture running, preserves capture quality and playback volume, and leaves the live picture free of color filters. On reload, the preference is applied before the app loads to avoid briefly showing the other palette.
 
-The idle preview echoes the logo with slowly drifting window outlines. Pause the animation from the preview’s top-right corner; your choice is remembered. Reduced motion uses a still illustration. The background disappears when capture starts and pauses when the page is hidden, the preview is off screen, or a dialog is open.
+The idle preview echoes the logo with mist blue window bands and outlines drifting around a clear central control area. Pause the animation from the preview’s top-right corner; your choice is remembered. Reduced motion uses a still illustration. The background disappears when capture starts and pauses when the page is hidden, the preview is off screen, or a dialog is open.
 
 ### Capture quality and volume
 
@@ -81,6 +81,8 @@ After capture starts, the app reads the track’s `getCapabilities()` and uses `
 Capability ranges do not guarantee every combination is available. The interface therefore displays actual `getSettings()` values and omits unreported fields. The browser and audio output device may resample audio or mix channels, and remote desktop software may compress both video and audio. Maximum capture specifications do not guarantee lossless reception on the remote device.
 
 Playback **100% is unity gain; 200% doubles signal amplitude**, rather than perceived loudness. This is not system volume. Above 100%, the interface highlights distortion and feedback risks. Strong signals may clip, so lower volume if needed. Capture quality and playback volume are independent: the default 35% playback level does not reduce capture quality.
+
+The slider marks **35% (default) and 100%**. Mouse dragging gently snaps within 3 percentage points of either mark, or 5 points on a touchscreen. The matching mark and readout highlight; keep dragging beyond that range to leave it. Arrow keys always adjust by 1%, while Home / End reach 0% / 200%. Short tracks hide mark labels to prevent overlap.
 
 ### Output checks and playback mute
 

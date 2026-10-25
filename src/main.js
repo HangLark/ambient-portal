@@ -22,6 +22,7 @@ const themeOptions = [['system', 'themeSystem', 'monitor'], ['light', 'themeLigh
 const t = (key) => translate(language, key);
 const label = (key) => `<span data-i18n="${key}">${t(key)}</span>`;
 const bars = (count) => '<i></i>'.repeat(count);
+const volumeAnchors = [DEFAULT_VOLUME * 100, 100];
 const closeButton = () => `<form method="dialog"><button class="text-button dialog-close" type="submit">${label('closeDialog')}</button></form>`;
 
 document.querySelector('#app').innerHTML = `
@@ -51,9 +52,11 @@ document.querySelector('#app').innerHTML = `
       <div class="stage" id="stage" data-state="idle">
         <video id="preview-video" autoplay playsinline muted></video>
         <div class="standby-art" id="standby-art" aria-hidden="true">
-          <svg class="standby-window standby-window-far" viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"><path d="M140 780V355C140 86 346-88 600-88s460 174 460 443v425" /></svg>
-          <svg class="standby-window standby-window-middle" viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"><path d="M240 780V355C240 142 401 10 600 10s360 132 360 345v425" /></svg>
-          <svg class="standby-window standby-window-near" viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"><path d="M340 780V355C340 203 456 108 600 108s260 95 260 247v425" /></svg>
+          ${[
+            ['far', 'M140 780V355C140 86 346-88 600-88s460 174 460 443v425'],
+            ['middle', 'M240 780V355C240 142 401 10 600 10s360 132 360 345v425'],
+            ['near', 'M340 780V355C340 203 456 108 600 108s260 95 260 247v425'],
+          ].map(([depth, path]) => `<svg class="standby-window standby-window-${depth}" viewBox="0 0 1200 700" fill="none" preserveAspectRatio="xMidYMid slice"><path class="window-band" d="${path}" /><path class="window-edge" d="${path}" /></svg>`).join('')}
         </div>
         <div class="empty-state" id="empty-state">
           <div class="preview-placeholder" id="preview-placeholder" aria-hidden="true">${icon('camera')}</div>
@@ -81,7 +84,7 @@ document.querySelector('#app').innerHTML = `
         <div class="control-bar">
           <button class="camera-button secondary-button" id="camera-button" type="button"><span id="camera-action-icon"></span><span id="camera-action"></span></button>
           <button class="monitor-button" id="microphone-switch" type="button" role="switch" aria-checked="false" aria-describedby="sound-advice">${icon('mic')}<span>${label('listen')}</span><span class="switch-track" aria-hidden="true"><i></i></span></button>
-          <div class="volume-group"><div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div><div class="volume-slider"><button class="icon-button mute-button" id="mute-playback" type="button" aria-describedby="playback-muted-help"></button><div class="range-control" id="volume-track"><span class="range-track" aria-hidden="true"><i></i></span><input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="sound-advice volume-boost-hint" /></div></div></div>
+          <div class="volume-group"><div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div><div class="volume-slider"><button class="icon-button mute-button" id="mute-playback" type="button" aria-describedby="playback-muted-help"></button><div class="range-control" id="volume-track"><span class="range-track" aria-hidden="true"><i></i>${volumeAnchors.map((value) => `<span class="range-mark" data-volume="${value}" style="--position: ${value / MAX_VOLUME}%"><span class="range-mark-label">${value}%${value === DEFAULT_VOLUME * 100 ? `<span class="range-mark-default"> ${label('volumeDefault')}</span>` : ''}</span></span>`).join('')}</span><input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="sound-advice volume-snap-help volume-boost-hint" /></div></div><span class="visually-hidden" id="volume-snap-help">${label('volumeSnapHelp')}</span></div>
           <button class="stop-button" id="stop-all" type="button" disabled>${icon('stop')}${label('stopAll')}</button>
         </div>
         <div class="audio-status-row">
@@ -157,6 +160,7 @@ let inputDetected = false;
 let fullscreenError = false;
 let playbackConfirmed = false;
 let pendingStart = null;
+let volumePointerType = null;
 const meters = [$('level-meter'), $('scene-meter')].map((meter) => [...meter.children]);
 
 function renderBackgroundMotion() {
@@ -327,7 +331,12 @@ function render() {
   $('volume-value').textContent = `${Math.round(media.volume * 100)}%`;
   $('volume-track').style.setProperty('--volume', `${media.volume / MAX_VOLUME * 100}%`);
   $('volume-track').classList.toggle('is-disabled', $('volume').disabled);
-  $('volume').setAttribute('aria-valuetext', `${Math.round(media.volume * 100)}%`);
+  const volumePercent = Math.round(media.volume * 100);
+  const volumeAnchorLabel = volumePercent === DEFAULT_VOLUME * 100 ? t('volumeDefault') : volumePercent === 100 ? t('volumeOriginal') : '';
+  $('volume').setAttribute('aria-valuetext', `${volumePercent}%${volumeAnchorLabel ? ` · ${volumeAnchorLabel}` : ''}`);
+  $('volume').title = t('volumeSnapHelp');
+  $('volume-value').classList.toggle('is-anchor', !$('volume').disabled && volumeAnchors.includes(volumePercent));
+  for (const mark of document.querySelectorAll('.range-mark')) mark.dataset.active = String(!$('volume').disabled && Number(mark.dataset.volume) === volumePercent);
   $('volume-value').classList.toggle('is-boosted', media.volume > 1);
   const playbackMuted = media.volume === 0;
   const muteLabel = playbackMuted ? `${t('unmutePlayback')} · ${Math.round(media.unmutedVolume * 100)}%` : t('mutePlayback');
@@ -514,7 +523,23 @@ for (const id of ['resume-audio', 'diagnostic-resume']) $(id).addEventListener('
   nextFocus.focus({ preventScroll: true });
   void media.resumeAudio();
 });
-$('volume').addEventListener('input', (event) => { media.setVolume(Number(event.target.value) / 100); render(); });
+function clearVolumePointer() { volumePointerType = null; }
+$('volume').addEventListener('pointerdown', (event) => {
+  if (event.isPrimary && event.button === 0) volumePointerType = event.pointerType;
+});
+$('volume').addEventListener('keydown', clearVolumePointer);
+$('volume').addEventListener('blur', clearVolumePointer);
+document.addEventListener('pointerup', clearVolumePointer, true);
+document.addEventListener('pointercancel', clearVolumePointer, true);
+window.addEventListener('blur', clearVolumePointer);
+$('volume').addEventListener('input', (event) => {
+  const requested = Number(event.target.value);
+  // Only direct dragging snaps. Keyboard and assistive controls keep every 1% step.
+  const radius = volumePointerType === 'touch' ? 5 : 3;
+  const value = volumePointerType ? volumeAnchors.find((anchor) => Math.abs(requested - anchor) <= radius) ?? requested : requested;
+  media.setVolume(value / 100);
+  render();
+});
 $('mute-playback').addEventListener('click', () => media.togglePlaybackMute());
 $('fullscreen').addEventListener('click', async () => {
   try {
@@ -547,6 +572,9 @@ if (import.meta.hot) import.meta.hot.dispose(() => {
   media.dispose(); cancelAnimationFrame(levelFrame);
   stageObserver.disconnect();
   reducedMotion.removeEventListener('change', renderBackgroundMotion);
+  document.removeEventListener('pointerup', clearVolumePointer, true);
+  document.removeEventListener('pointercancel', clearVolumePointer, true);
+  window.removeEventListener('blur', clearVolumePointer);
   systemTheme.removeEventListener('change', followSystemTheme);
   document.removeEventListener('click', dismissTheme);
   document.removeEventListener('keydown', closeThemeWithEscape);
