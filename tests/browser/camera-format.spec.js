@@ -23,7 +23,7 @@ const start = async (page) => {
 test('native widescreen and standard modes switch on the same track while audio continues', async ({ page }) => {
   await start(page);
   await toggleListening(page);
-  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
   await page.locator('#settings-open').click();
   for (const [format, ratio] of [['16:9', 16 / 9], ['4:3', 4 / 3], ['auto', null]]) {
     await page.getByLabel('Aspect ratio', { exact: true }).selectOption(format);
@@ -35,7 +35,7 @@ test('native widescreen and standard modes switch on the same track while audio 
     expect(actual.resizeMode).toBe('none');
     await expect(page.locator('#preview-detail')).toContainText(`${actual.width} × ${actual.height}`);
     await expect(page.locator('#preview-detail')).toContainText('Device native mode');
-    await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+    await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
     expect(await page.locator('video').evaluate((video) => getComputedStyle(video).objectFit)).toBe('contain');
   }
   expect(await page.evaluate(() => window.__formatTracks.length)).toBe(2);

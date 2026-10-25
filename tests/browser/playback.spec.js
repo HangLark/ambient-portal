@@ -1,5 +1,50 @@
 import { test, expect } from '@playwright/test';
 
+test('the direct audio-only entry keeps permission, focus, mute and restart protections', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__requests = [];
+    window.__audioTracks = [];
+    const capture = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      window.__requests.push(constraints.video ? 'video' : 'audio');
+      const stream = await capture(constraints);
+      window.__audioTracks.push(...stream.getAudioTracks());
+      return stream;
+    };
+  });
+  await page.goto('./');
+  await expect(page.getByRole('button', { name: 'Listen only', exact: true })).toBeVisible();
+  await page.locator('#empty-listen').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#playback-dialog')).toBeVisible();
+  expect(await page.evaluate(() => window.__requests)).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#empty-listen')).toBeFocused();
+  await page.locator('#language').click();
+  await page.getByRole('button', { name: '只听声音', exact: true }).click();
+  await page.locator('#playback-confirm').click();
+  await expect(page.locator('#audio-scene')).toBeVisible();
+  await expect(page.locator('#microphone-switch')).toBeFocused();
+  await expect(page.locator('#playback-status')).toHaveText('正在此设备回放');
+  await expect(page.locator('#sound-advice')).toContainText('打开此页的设备');
+  await expect(page.locator('#camera-button')).toHaveText('开启摄像头');
+  expect(await page.evaluate(() => window.__requests)).toEqual(['audio']);
+  await page.locator('#volume').press('End');
+  await page.locator('#mute-playback').click();
+  await expect(page.locator('#volume-value')).toHaveText('0%');
+  expect(await page.evaluate(() => window.__audioTracks[0].readyState)).toBe('live');
+  await page.locator('#mute-playback').click();
+  await expect(page.locator('#volume-value')).toHaveText('200%');
+  await page.locator('#stop-all').click();
+  expect(await page.evaluate(() => window.__audioTracks[0].readyState)).toBe('ended');
+  await page.locator('#empty-listen').click();
+  await expect(page.locator('#playback-dialog')).toBeHidden();
+  await expect(page.locator('#volume-value')).toHaveText('35%');
+  await expect(page.locator('#volume-reset-hint')).toBeVisible();
+  expect(await page.evaluate(() => window.__requests)).toEqual(['audio', 'audio']);
+  await page.locator('#stop-all').click();
+});
+
 test('the default reminder precedes microphone permission and discards unchecked or cancelled choices', async ({ page }) => {
   await page.addInitScript(() => {
     window.__microphoneRequests = 0;
@@ -32,11 +77,11 @@ test('the default reminder precedes microphone permission and discards unchecked
   await expect(page.getByRole('checkbox', { name: 'Don’t remind me in this browser' })).not.toBeChecked();
   await page.locator('#playback-confirm').click();
   await expect(page.locator('#playback-dialog')).toBeHidden();
-  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
   expect(await page.evaluate(() => window.__microphoneRequests)).toBe(1);
   await page.locator('#microphone-switch').click();
   await page.locator('#microphone-switch').click();
-  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
   await expect(page.locator('#playback-dialog')).toBeHidden();
   await page.reload();
   await page.locator('#microphone-switch').click();
@@ -51,17 +96,17 @@ test('the reminder can be skipped across reloads and restored without interrupti
   await expect(skipReminder).not.toBeChecked();
   await skipReminder.check();
   await page.locator('#playback-confirm').click();
-  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
 
   await page.reload();
   await expect(page.locator('#microphone-switch')).toHaveAttribute('aria-checked', 'false');
   await expect(page.locator('#playback-dialog')).toBeHidden();
   await page.locator('#sound-help').click();
   await page.locator('#diagnostic-start').click();
-  await expect(page.locator('#check-playback')).toHaveText('Page playback is on');
+  await expect(page.locator('#check-playback')).toHaveText('Playing on this device');
   await expect(page.locator('#sound-dialog form button')).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
   await expect(page.locator('#playback-dialog')).toBeHidden();
   await page.locator('#volume').press('End');
 
@@ -72,7 +117,7 @@ test('the reminder can be skipped across reloads and restored without interrupti
   await reminder.press('Space');
   await expect(reminder).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press('Escape');
-  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
   await expect(page.locator('#volume-value')).toHaveText('200%');
   await page.locator('#microphone-switch').click();
   await page.locator('#microphone-switch').click();
@@ -102,11 +147,11 @@ test('blocked storage explains that the reminder choice only applies to the curr
     await page.locator('#microphone-switch').click();
     await page.getByRole('checkbox', { name: 'Don’t remind me in this browser' }).check();
     await page.locator('#playback-confirm').click();
-    await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+    await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
     await expect(page.locator('#playback-preference-notice')).toContainText('Couldn’t save this setting');
     await page.locator('#microphone-switch').click();
     await page.locator('#microphone-switch').click();
-    await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+    await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
     await expect(page.locator('#playback-dialog')).toBeHidden();
     await page.reload();
     await page.locator('#microphone-switch').click();
@@ -116,7 +161,7 @@ test('blocked storage explains that the reminder choice only applies to the curr
     await page.locator('#diagnostic-start').click();
     await page.getByRole('checkbox', { name: 'Don’t remind me in this browser' }).check();
     await page.locator('#playback-confirm').click();
-    await expect(page.locator('#check-playback')).toHaveText('Page playback is on');
+    await expect(page.locator('#check-playback')).toHaveText('Playing on this device');
     await expect(page.locator('#sound-playback-preference-notice')).toBeVisible();
     await expect(page.locator('#sound-playback-preference-notice')).toContainText('Couldn’t save this setting');
     await page.keyboard.press('Escape');
@@ -195,7 +240,7 @@ test('the sound-check shortcut requires confirmation and returns focus correctly
     await expect(page.locator('#diagnostic-start')).toBeFocused();
     await page.locator('#diagnostic-start').press('Enter');
     await page.locator('#playback-confirm').press('Enter');
-    await expect(page.locator('#check-playback')).toHaveText(language === 'en-US' ? 'Page playback is on' : '本页回放已开启');
+    await expect(page.locator('#check-playback')).toHaveText(language === 'en-US' ? 'Playing on this device' : '正在此设备回放');
     await expect(page.locator('#sound-dialog form button')).toBeFocused();
     await page.keyboard.press('Escape');
     await page.locator('#mute-playback').click();
@@ -266,6 +311,6 @@ test('denied microphone permission can be retried after confirmation without a s
   await expect(page.locator('#microphone-switch')).toBeFocused();
   await page.locator('#microphone-switch').click();
   await expect(page.locator('#playback-dialog')).toBeHidden();
-  await expect(page.locator('#playback-status')).toHaveText('Page playback is on');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
   await page.locator('#stop-all').click();
 });

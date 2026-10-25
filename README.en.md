@@ -24,7 +24,7 @@ Built with Vite, vanilla JavaScript, and native browser APIs. No backend, accoun
 - Direct camera preview and fullscreen viewing. Prefers the highest available native resolution, then the highest frame rate at that resolution, with actual capture settings displayed.
 - Auto, 16:9, 4:3, 1:1, and 9:16 aspect ratio negotiation. Native formats come first; unavailable formats keep the working picture, with an explicit option to allow cropping.
 - Independent camera and microphone controls, plus one action to stop all capture. Navigation and refresh release media tracks.
-- The preview fills the remaining window height, with a shared control bar in desktop, phone, and fullscreen views. Start directly from the empty preview; introductory copy collapses during capture.
+- The preview fills the remaining window height, with a shared control bar in desktop, phone, and fullscreen views. Choose **Start camera** or **Listen only** directly from the empty preview.
 - **Device settings** identifies the actual camera and microphone, with independent selection when multiple authorized inputs are available.
 - An audio-only view with real input levels. **Can’t hear anything?** traces microphone input, browser playback, and remote audio forwarding.
 - Sound checks suggest the next step for the current state, with actions to start listening, resume paused playback, or restore muted volume to the default 35%.
@@ -61,7 +61,7 @@ Production preview: `http://127.0.0.1:4173/ambient-portal/`. The preview server 
 ## Use the app
 
 1. Open the page in Chrome or Edge on the **controlled device**. Click **Start camera** and allow camera access.
-2. Enable **Listen** when you want sound, then check that the controlled device won’t play sound through its speakers. Click **Start listening** and allow microphone access. This page sends sound to **the controlled device’s default system audio output**, where your remote app can capture it.
+2. Enable **Listen** when you want sound, or choose **Listen only** from the initial view without starting the camera. Check that the controlled device won’t play sound through its speakers, then click **Start listening** and allow microphone access. This page sends sound to **the controlled device’s default system audio output**, where your remote app can capture it.
 3. If playback is paused by the browser, click **Resume audio**. Start at a low volume and adjust as needed.
 4. The speaker button beside the volume slider immediately mutes playback; click again to restore its level. The microphone keeps capturing, but remote forwarding receives no sound from this page. **Stop camera** stops video only; turning **Listen** off releases the microphone. **Stop all** releases both devices.
 5. Leaving or refreshing the page also stops capture. Saved browser permission never starts capture automatically on your next visit.
@@ -86,11 +86,11 @@ By default, the first start after opening or refreshing the page reminds you to 
 
 **Don’t remind me in this browser** is unchecked by default. The choice is saved only when checked and confirmed with **Start listening**, and survives reopening or refreshing the page. Without it, confirmation lasts only for the current page. Change the preference anytime in **Device settings → Microphone → Remind me before listening**. Turning reminders back on takes effect at the next manual start without interrupting current listening. If the browser cannot save the preference, a message explains that it applies only to the current page.
 
-Starting from **Can’t hear anything?** follows the same preference. Turning off reminders never starts listening automatically or bypasses browser microphone permissions. The page cannot reliably read system mute; confirmation records your check, not an automatic mute detection.
+**Listen only** and starting from **Can’t hear anything?** follow the same preference. Turning off reminders never starts listening automatically or bypasses browser microphone permissions. The page cannot reliably read system mute; confirmation records your check, not an automatic mute detection.
 
 - **Temporary mute:** the speaker button stops playback immediately while the camera, microphone, and input meter continue. Click again to restore the last nonzero level, including 200% within the same listening session. It also restores playback after moving the slider to 0%. Sound checks retain a separate action to restore the default 35%.
 - **Reopening:** a previous level above 100% resets to 35% with a visible explanation; levels up to 100% are retained. If playback was muted when stopped, it stays muted and cannot restore an old boost later. Switching microphones follows the same rule.
-- **Two different mute controls:** a remote app’s option to mute the controlled device can silence its speakers while keeping remote listening available. **Mute this page’s playback** stops this page’s audio feed, so the listening device also receives no sound from it. **Audio output: controlled device · system default** identifies the output route; it does not mean the local speakers are audible.
+- **Two different mute controls:** a remote app’s option to mute the controlled device can silence its speakers while keeping remote listening available. **Mute this page’s playback** stops this page’s audio feed, so the listening device also receives no sound from it. **Playback: the device with this page open · default audio output** identifies the output route; it does not mean the local speakers are audible.
 
 ### Aspect ratios
 
@@ -114,7 +114,7 @@ Open **Devices** above the preview for actual input names and audio specificatio
 - With only the microphone on, the main view shows listening status, actual source, and input level. At 0% playback volume, capture and the input meter continue; switch monitoring off to release the microphone.
 - The audio-only view also identifies startup, muted playback, and interrupted input. At 0%, **Can’t hear anything?** can restore volume to 35% without restarting capture. Every action in sound checks requires an explicit click.
 - **No clear sound detected yet** means no substantial input is currently detected, not a device failure. Interrupted input, paused browser playback, and zero playback volume have distinct states. A suspended audio context does not pretend to measure input levels.
-- **Can’t hear anything?** follows microphone input, this page’s playback, and sound on the listening device. **Page playback is on** means the browser is producing audio, not that local speakers or remote listening are audible. The dialog also explains what to check if remote sound stops only after muting the controlled device in system settings.
+- **Can’t hear anything?** follows microphone input, this page’s playback, and sound on the listening device. **Playing on this device** means the browser is producing audio, not that local speakers or remote listening are audible. The dialog also explains what to check if remote sound stops only after muting the controlled device in system settings.
 
 ### Remote desktop audio
 
