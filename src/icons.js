@@ -4,7 +4,6 @@ const paths = {
   moon: '<path d="M20.9 13a9 9 0 0 1-9.9-9.9A9 9 0 1 0 20.9 13Z"/>',
   monitor: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',
   settings: '<path d="M4 7h9m4 0h3M4 17h3m4 0h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
-  portal: '<path d="M5 21V10a7 7 0 0 1 14 0v11M9 21V10a3 3 0 0 1 6 0v11M3 21h18"/>',
   camera: '<path d="m15 10 5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="3"/>',
   cameraOff: '<path d="m2 2 20 20M9 6h3a3 3 0 0 1 3 3v1l5-3v10l-5-3M15 15a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V9c0-1 .5-2 1-2.5"/>',
   mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/>',

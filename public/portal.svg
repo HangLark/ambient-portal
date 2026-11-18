@@ -1,5 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <rect width="48" height="48" rx="13" fill="#1a1d20"/>
-  <path d="M14 36V20a10 10 0 0 1 20 0v16M20 36V21a4 4 0 0 1 8 0v15" stroke="#a8bdf4" stroke-width="2.6" stroke-linecap="round"/>
-  <path d="M11 36h26" stroke="#a8bdf4" stroke-width="2.6" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="#4665b0">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      :root { fill: #a8bdf4; }
+      circle { fill: #efc5ac; }
+    }
+  </style>
+  <path fill-rule="evenodd" d="
+    M1.5 3.7C1.5 2.5 2.3 2 3.4 2.5L11 6V26L3.4 29.5C2.3 30 1.5 29.5 1.5 28.3Z
+    M4.5 7.1V24.9L8 23.4V8.6Z"/>
+  <path d="
+    M13.5 5.5H26A4 4 0 0 1 30 9.5V22.5A4 4 0 0 1 26 26.5H13.5V22.9
+    C18.1 22.5 21.2 17.3 26.5 16.7V10A1 1 0 0 0 25.5 9H13.5Z"/>
+  <circle cx="18" cy="14" r="2.25" fill="#9b5f40"/>
 </svg>

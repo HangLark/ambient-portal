@@ -23,6 +23,7 @@ let themePreference = document.documentElement.dataset.themePreference || 'syste
 const themeOptions = [['system', 'themeSystem', 'monitor'], ['light', 'themeLight', 'sun'], ['dark', 'themeDark', 'moon']];
 const t = (key) => translate(language, key);
 const label = (key) => `<span data-i18n="${key}">${t(key)}</span>`;
+const brandMark = `<img class="icon brand-symbol" src="${document.querySelector('link[rel="icon"]').href}" alt="" width="28" height="28" />`;
 const bars = (count) => '<i></i>'.repeat(count);
 const volumeAnchors = [DEFAULT_VOLUME * 100, 100];
 const closeButton = () => `<form method="dialog"><button class="text-button dialog-close" type="submit">${label('closeDialog')}</button></form>`;
@@ -31,7 +32,7 @@ document.querySelector('#app').innerHTML = `
   <a class="skip-link" href="#controls">${label('skip')}</a>
   <header class="site-header"><div class="header-inner">
     <div class="header-identity">
-      <h1 class="brand-heading" id="heading"><a class="brand" id="brand" href="#heading" aria-label="${t('brandName')}">${icon('portal', 'brand-symbol')}${label('brandName')}</a></h1>
+      <h1 class="brand-heading" id="heading"><a class="brand" id="brand" href="#heading" aria-label="${t('brandName')}">${brandMark}${label('brandName')}</a></h1>
       <p class="header-description">${label('intro')}</p>
     </div>
     <div class="header-actions">
@@ -165,7 +166,7 @@ document.querySelector('#app').innerHTML = `
     <footer class="privacy-row"><p>${icon('shield')}${label('privacyBody')}</p><button class="text-button" id="guide-open" type="button">${label('guide')}${icon('chevron')}</button></footer>
   </main>
   <dialog id="guide-dialog" aria-labelledby="guide-title" aria-describedby="guide-intro">
-    <div class="dialog-heading">${icon('portal')}<h2 id="guide-title">${label('guideTitle')}</h2></div><p id="guide-intro">${label('guideIntro')}</p>
+    <div class="dialog-heading">${brandMark}<h2 id="guide-title">${label('guideTitle')}</h2></div><p id="guide-intro">${label('guideIntro')}</p>
     <ol><li>${label('guideStep1')}</li><li>${label('guideStep2')}</li><li>${label('guideStep3')}</li></ol>
     <div class="dialog-note">${icon('headphones')}<p>${label('guideNote')}</p></div><p>${label('guidePrivacy')}</p>${closeButton()}
   </dialog>

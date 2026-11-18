@@ -126,7 +126,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .brand { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 600; line-height: 1.4; letter-spacing: -.4px; white-space: nowrap; text-decoration: none; color: var(--text); }
 .header-description { color: var(--text-secondary); font-size: 14px; line-height: 1.6; white-space: nowrap; }
 html[lang='zh-CN'] .brand { letter-spacing: 1.5px; }
-.brand-symbol { width: 26px; height: 30px; color: var(--accent); stroke-width: 1.4; }
+.brand-symbol { width: 28px; height: 28px; }
 .language-button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 7px; color: var(--text-secondary); background: transparent; font-size: 14px; }
 .language-button:hover { background: var(--hover-bg); }
 .language-button .icon { width: 15px; height: 15px; }
@@ -321,7 +321,7 @@ html[lang='zh-CN'] .empty-state h3 { letter-spacing: .4px; }
 }
 @media (max-width: 680px) {
   .brand { font-size: 16px; gap: 8px; }
-  .brand-symbol { width: 23px; height: 27px; }
+  .brand-symbol { width: 24px; height: 24px; }
   .panel-toolbar { flex-wrap: nowrap; gap: 8px; padding: 4px 8px 4px 16px; }
   .panel-toolbar h2 { font-size: 14px; }
   .panel-toolbar h2 > .icon { display: none; }
