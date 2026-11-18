@@ -48,9 +48,12 @@ document.querySelector('#app').innerHTML = `
     <div class="environment-error" id="environment-error" role="alert" hidden>${icon('alert')}<p></p></div>
     <section class="workspace" id="workspace" aria-labelledby="preview-title">
       <div class="panel-toolbar">
-        <h2 id="preview-title">${icon('portal')}<span id="preview-name"></span></h2>
-        <span class="status-badge" id="preview-status" role="status"><span class="status-dot"></span><span id="preview-status-text"></span></span>
+        <div class="preview-heading">
+          <h2 id="preview-title">${icon('monitor')}<span id="preview-name"></span></h2>
+          <span class="status-badge" id="preview-status" role="status"><span class="status-dot"></span><span id="preview-status-text"></span></span>
+        </div>
         <button class="text-button" id="settings-open" type="button">${icon('settings')}${label('settings')}</button>
+        <button class="text-button" id="fullscreen-controls" type="button" aria-expanded="false" aria-controls="capture-panel settings-open" hidden>${label('fullscreenControls')}${icon('chevron')}</button>
         <button class="icon-button" id="fullscreen" type="button">${icon('expand')}</button>
       </div>
       <div class="stage" id="stage" data-state="idle">
@@ -62,10 +65,12 @@ document.querySelector('#app').innerHTML = `
           <span class="ambient-color ambient-peach"></span>
         </div>
         <div class="empty-state" id="empty-state">
-          <div class="preview-placeholder" id="preview-placeholder" aria-hidden="true">${icon('camera')}</div>
-          <h3 id="empty-title"></h3><p id="empty-body"></p>
+          <div class="empty-intro">
+            <div class="preview-placeholder" id="preview-placeholder" aria-hidden="true">${icon('camera')}</div>
+            <h3 id="empty-title"></h3><p id="empty-body"></p>
+          </div>
           <div class="empty-actions">
-            <button class="primary-button" id="start-all" type="button">${icon('portal')}${label('startTogether')}</button>
+            <button class="primary-button" id="start-all" type="button">${icon('play')}${label('startTogether')}</button>
             <div class="single-input-actions">
               <button class="text-button" id="empty-start" type="button">${icon('camera')}<span id="empty-action"></span></button>
               <button class="text-button" id="empty-listen" type="button">${icon('headphones')}${label('listenOnly')}</button>
@@ -82,40 +87,44 @@ document.querySelector('#app').innerHTML = `
         </div>
         <button class="icon-button background-motion" id="background-motion" type="button"></button>
       </div>
-      <div class="preview-footer"><span id="preview-detail"></span><span id="camera-source"></span></div>
-      <section class="control-panel" id="controls" aria-label="${t('controls')}" tabindex="-1">
-        <div class="control-bar">
-          <button class="camera-button secondary-button" id="camera-button" type="button"><span id="camera-action-icon"></span><span id="camera-action"></span></button>
-          <button class="monitor-button" id="microphone-switch" type="button" role="switch" aria-checked="false" aria-describedby="sound-advice">${icon('mic')}<span>${label('listen')}</span><span class="switch-track" aria-hidden="true"><i></i></span></button>
-          <div class="volume-group">
-            <div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div>
-            <div class="volume-slider">
-              <button class="icon-button mute-button" id="mute-playback" type="button" aria-describedby="playback-muted-help"></button>
-              <div class="range-control" id="volume-track">
-                <span class="range-track" aria-hidden="true"><i></i>${volumeAnchors.map((value) => `<span class="range-mark" data-volume="${value}" style="--position: ${value / MAX_VOLUME}%"></span>`).join('')}</span>
-                <input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="sound-advice volume-snap-help volume-boost-hint" />
-              </div>
+      <div id="capture-panel">
+        <div class="preview-footer"><span id="preview-detail"></span><span id="camera-source"></span></div>
+        <section class="control-panel" id="controls" aria-label="${t('controls')}" tabindex="-1">
+          <div class="control-bar">
+            <div class="input-controls">
+              <button class="camera-button secondary-button" id="camera-button" type="button"><span id="camera-action-icon"></span><span id="camera-action"></span></button>
+              <button class="monitor-button" id="microphone-switch" type="button" role="switch" aria-checked="false" aria-describedby="sound-advice">${icon('mic')}<span>${label('listen')}</span><span class="switch-track" aria-hidden="true"><i></i></span></button>
             </div>
-            <span class="visually-hidden" id="volume-snap-help">${label('volumeSnapHelp')}</span>
+            <div class="volume-group">
+              <div class="volume-heading"><label for="volume">${label('volume')}</label><output for="volume" id="volume-value">${DEFAULT_VOLUME * 100}%</output></div>
+              <div class="volume-slider">
+                <button class="icon-button mute-button" id="mute-playback" type="button" aria-describedby="playback-muted-help"></button>
+                <div class="range-control" id="volume-track">
+                  <span class="range-track" aria-hidden="true"><i></i>${volumeAnchors.map((value) => `<span class="range-mark" data-volume="${value}" style="--position: ${value / MAX_VOLUME}%"></span>`).join('')}</span>
+                  <input id="volume" type="range" min="0" max="${MAX_VOLUME * 100}" value="${DEFAULT_VOLUME * 100}" step="1" aria-describedby="sound-advice volume-snap-help volume-boost-hint" />
+                </div>
+              </div>
+              <span class="visually-hidden" id="volume-snap-help">${label('volumeSnapHelp')}</span>
+            </div>
+            <button class="stop-button" id="stop-all" type="button" disabled>${icon('stop')}${label('stopAll')}</button>
           </div>
-          <button class="stop-button" id="stop-all" type="button" disabled>${icon('stop')}${label('stopAll')}</button>
-        </div>
-        <div class="audio-status-row">
-          <div class="input-status"><span class="level-meter" id="level-meter" aria-hidden="true">${bars(12)}</span><span id="mic-status"></span></div>
-          <span class="playback-status" id="playback-status" role="status"></span>
-          <button class="text-button resume-button" id="resume-audio" type="button" hidden>${icon('play')}${label('resumeAudio')}</button>
-          <button class="text-button sound-help" id="sound-help" type="button">${icon('info')}${label('soundHelp')}</button>
-        </div>
-        <p class="sound-advice" id="sound-advice"></p>
-        <p class="sound-advice" id="playback-muted-help" hidden>${label('playbackMutedHelp')}</p>
-        <p class="notice" id="playback-preference-notice" role="status" hidden>${label('playbackReminderSaveFailed')}</p>
-        <p class="notice" id="volume-reset-hint" role="status" hidden>${label('volumeResetHint')}</p>
-        <p class="notice" id="volume-boost-hint" role="status" hidden>${label('volumeBoostHint')}</p>
-        <p class="notice" id="mic-error" role="alert" hidden></p>
-        <p class="notice" id="camera-error" role="alert" hidden></p>
-        <p class="notice" id="picture-notice" role="status" hidden></p>
-        <p class="notice" id="fullscreen-error" role="status" hidden></p>
-      </section>
+          <div class="audio-status-row">
+            <div class="input-status"><span class="level-meter" id="level-meter" aria-hidden="true">${bars(12)}</span><span id="mic-status"></span></div>
+            <span class="playback-status" id="playback-status" role="status"></span>
+            <p class="sound-advice" id="sound-advice"></p>
+            <button class="text-button resume-button" id="resume-audio" type="button" hidden>${icon('play')}${label('resumeAudio')}</button>
+            <button class="text-button sound-help" id="sound-help" type="button">${icon('info')}${label('soundHelp')}</button>
+          </div>
+          <p class="sound-advice" id="playback-muted-help" hidden>${label('playbackMutedHelp')}</p>
+          <p class="notice" id="playback-preference-notice" role="status" hidden>${label('playbackReminderSaveFailed')}</p>
+          <p class="notice" id="volume-reset-hint" role="status" hidden>${label('volumeResetHint')}</p>
+          <p class="notice" id="volume-boost-hint" role="status" hidden>${label('volumeBoostHint')}</p>
+          <p class="notice" id="mic-error" role="alert" hidden></p>
+          <p class="notice" id="camera-error" role="alert" hidden></p>
+          <p class="notice" id="picture-notice" role="status" hidden></p>
+          <p class="notice" id="fullscreen-error" role="status" hidden></p>
+        </section>
+      </div>
       <dialog id="playback-dialog" aria-labelledby="playback-title" aria-describedby="playback-intro playback-warning">
         <div class="dialog-heading">${icon('headphones')}<h2 id="playback-title">${label('playbackTitle')}</h2></div>
         <p id="playback-intro">${label('playbackIntro')}</p>
@@ -165,6 +174,9 @@ document.querySelector('#app').innerHTML = `
 const $ = (id) => document.getElementById(id);
 const disposeAmbientBackground = initAmbientBackground($('standby-art'));
 const video = $('preview-video');
+const workspace = $('workspace');
+const controlsToggle = $('fullscreen-controls');
+const capturePanel = $('capture-panel');
 let savedCameraFormat = loadCameraFormat(storage);
 const media = new MediaController({ video, cameraFormat: savedCameraFormat, onChange: render });
 let levelFrame = 0;
@@ -172,6 +184,7 @@ let lastMeterTime = 0;
 let lastSignalTime = -Infinity;
 let inputDetected = false;
 let fullscreenError = false;
+let fullscreenIdleTimer;
 let playbackConfirmed = false;
 let pendingStart = null;
 let volumePointerType = null;
@@ -276,6 +289,12 @@ function render() {
   const audioOnly = !cameraActive && !cameraBusy && micEngaged;
   const cameraState = camera.muted && cameraActive ? 'paused' : camera.status;
   $('stage').dataset.state = cameraState;
+  syncFullscreenLayout(document.fullscreenElement === workspace && cameraState === 'active');
+  if (capturePanel.hidden) {
+    const soundInterrupted = (mic.error && $('mic-error').hidden) || (mic.status === 'paused' && $('resume-audio').hidden)
+      || (mic.muted && $('mic-status').dataset.state !== 'inputInterrupted');
+    if (soundInterrupted || (fullscreenError && $('fullscreen-error').hidden)) setFullscreenControls(true);
+  }
   $('preview-name').textContent = t(audioOnly ? 'audioOnly' : 'preview');
   const stageKey = audioOnly ? (mic.status === 'requesting' ? 'connecting' : mic.muted ? 'interrupted' : mic.status === 'paused' ? 'paused' : media.volume === 0 ? 'playbackMutedShort' : 'listening')
     : format.busy ? 'formatSwitching' : { idle: 'standby', requesting: 'connecting', active: 'live', paused: 'interrupted', error: 'needsAttention' }[cameraState];
@@ -559,11 +578,51 @@ $('volume').addEventListener('input', (event) => {
   render();
 });
 $('mute-playback').addEventListener('click', () => media.togglePlaybackMute());
+
+function revealFullscreenToolbar() {
+  clearTimeout(fullscreenIdleTimer);
+  workspace.classList.remove('toolbar-idle');
+  if (capturePanel.hidden) {
+    fullscreenIdleTimer = setTimeout(() => workspace.classList.add('toolbar-idle'), 3000);
+  }
+}
+
+function setFullscreenControls(expanded) {
+  controlsToggle.setAttribute('aria-expanded', String(expanded));
+  const collapsed = !controlsToggle.hidden && !expanded;
+  capturePanel.hidden = collapsed;
+  $('settings-open').hidden = collapsed;
+  revealFullscreenToolbar();
+}
+
+function syncFullscreenLayout(live) {
+  if (live === workspace.classList.contains('fullscreen-live')) return;
+  const focus = document.activeElement;
+  workspace.classList.toggle('fullscreen-live', live);
+  controlsToggle.hidden = !live;
+  // Keep a dialog's opener available if its device restarts while the dialog is open.
+  setFullscreenControls(live && Boolean(workspace.querySelector('dialog[open]')));
+  if (capturePanel.hidden && (capturePanel.contains(focus) || focus === $('settings-open') || focus === $('fullscreen'))) {
+    controlsToggle.focus({ preventScroll: true });
+  } else if (!live && focus === controlsToggle) {
+    $('fullscreen').focus({ preventScroll: true });
+  }
+}
+
+controlsToggle.addEventListener('click', () => setFullscreenControls(capturePanel.hidden));
+for (const event of ['pointermove', 'pointerdown', 'focusin']) {
+  workspace.addEventListener(event, () => { if (capturePanel.hidden) revealFullscreenToolbar(); });
+}
+$('stage').addEventListener('click', () => {
+  if (controlsToggle.hidden || capturePanel.hidden) return;
+  controlsToggle.focus({ preventScroll: true });
+  setFullscreenControls(false);
+});
 $('fullscreen').addEventListener('click', async () => {
   try {
     fullscreenError = false;
     if (document.fullscreenElement) await document.exitFullscreen();
-    else await $('workspace').requestFullscreen();
+    else await workspace.requestFullscreen();
   } catch { fullscreenError = true; }
   render();
 });
@@ -587,6 +646,7 @@ window.addEventListener('pagehide', () => {
   media.stopAll();
 });
 if (import.meta.hot) import.meta.hot.dispose(() => {
+  clearTimeout(fullscreenIdleTimer);
   disposeAmbientBackground();
   media.dispose(); cancelAnimationFrame(levelFrame);
   stageObserver.disconnect();

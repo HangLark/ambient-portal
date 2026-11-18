@@ -44,6 +44,14 @@ async function expectReachable(page, selector) {
   })).toBe(true);
 }
 
+test('the home controls leave every start option reachable in short windows', async ({ page }) => {
+  await page.goto('./');
+  for (const [width, height] of [[844, 390], [667, 375], [320, 568], [280, 568]]) {
+    await page.setViewportSize({ width, height });
+    for (const selector of ['#start-all', '#empty-start', '#empty-listen']) await expectReachable(page, selector);
+  }
+});
+
 test('start is above the fold; desktop, mobile and fullscreen keep the complete control bar reachable', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto('./');
@@ -57,6 +65,8 @@ test('start is above the fold; desktop, mobile and fullscreen keep the complete 
   await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
   await page.locator('#fullscreen').click();
   expect(await page.evaluate(() => document.fullscreenElement.id)).toBe('workspace');
+  await expect(page.locator('#controls')).toBeHidden();
+  await page.getByRole('button', { name: 'Controls', exact: true }).click();
   for (const selector of ['#camera-button', '#microphone-switch', '#stop-all', '#volume', '#settings-open']) await expectReachable(page, selector);
   await page.locator('#sound-help').click();
   await expect(page.locator('#sound-dialog')).toBeVisible();
@@ -79,6 +89,23 @@ test('start is above the fold; desktop, mobile and fullscreen keep the complete 
     await page.screenshot({ path: testInfo.outputPath(`audio-${width}.png`), fullPage: true });
     await page.locator('#stop-all').click();
   }
+});
+
+test('fullscreen reveals interrupted sound while keeping the camera live', async ({ page }) => {
+  await installDevices(page);
+  await page.goto('./');
+  await page.locator('#start-all').click();
+  await page.locator('#playback-confirm').click();
+  await expect(page.locator('#preview-status-text')).toHaveText('Live');
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
+  await page.locator('#fullscreen').click();
+  await expect(page.locator('#controls')).toBeHidden();
+  await page.evaluate(() => window.__contexts[0].suspend());
+  await expect(page.locator('#resume-audio')).toBeVisible();
+  await page.locator('#resume-audio').click();
+  await expect(page.locator('#playback-status')).toHaveText('Playing on this device');
+  await expect(page.locator('#stage')).toHaveAttribute('data-state', 'active');
+  expect(await page.evaluate(() => window.__captures.filter(({ kind }) => kind === 'video').length)).toBe(1);
 });
 
 test('sound checks distinguish quiet input, signal, zero gain, interruption and suspended playback in both languages', async ({ page }, testInfo) => {

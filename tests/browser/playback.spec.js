@@ -283,6 +283,7 @@ test('the reminder fits both palettes and languages on desktop, narrow phones an
   await page.locator('#camera-button').click();
   await expect(page.locator('#preview-status')).toHaveAttribute('data-state', 'active');
   await page.locator('#fullscreen').click();
+  await page.locator('#fullscreen-controls').click();
   await page.locator('#microphone-switch').click();
   await expect(page.locator('#playback-dialog')).toBeVisible();
   await expect(page.locator('#playback-confirm')).toBeInViewport({ ratio: 1 });
